@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instafinds.id - Produk Pilihan Premium</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="linktree-container">
+        <!-- Profile Section -->
+        <section class="profile-section">
+            <div class="profile-avatar">
+                <i class="fas fa-shopping-bag"></i>
+            </div>
+            <h1 class="profile-name">Instafinds.id</h1>
+            <p class="profile-bio">Kurator produk premium dari marketplace terpercaya 🛍️<br><small>Setiap produk dipilih dengan standar kualitas tinggi</small></p>
+            
+            <!-- Social Links -->
+            <div class="social-links-header">
+                <a href="https://www.instagram.com/instafinds.id/?utm_source=ig_web_button_share_sheet" target="_blank" title="Instagram">
+                    <i class="fab fa-instagram"></i>
+                </a>
+                <a href="https://www.tiktok.com/@instafinds.id?_r=1&_t=ZS-94M7Hx4m2nA" target="_blank" title="TikTok">
+                    <i class="fab fa-tiktok"></i>
+                </a>
+                <a href="https://t.me/instafinds24" target="_blank" title="Telegram">
+                    <i class="fab fa-telegram"></i>
+                </a>
+                <a href="https://whatsapp.com/channel/0029VbC6PuL6hENjFBwA5q2i" target="_blank" title="WhatsApp">
+                    <i class="fab fa-whatsapp"></i>
+                </a>
+            </div>
+        </section>
+
+        <!-- Products Section -->
+        <section class="products-section">
+            <div class="section-header">
+                <div class="section-title-container">
+                    <h2>⭐ Koleksi Produk</h2>
+                    <button class="btn-add-product" onclick="openAdminModal()" title="Tambah/Kelola Produk (Admin)">
+                        <i class="fas fa-plus"></i> Kelola Produk
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="search-bar-simple">
+                <i class="fas fa-search"></i>
+                <input type="text" id="productSearch" placeholder="Cari produk...">
+            </div>
+
+            <!-- Products Grid -->
+            <div class="products-grid">
+                <!-- Products akan dimuat dari admin panel -->
+            </div>
+        </section>
+
+        <!-- Newsletter Section -->
+        <section class="newsletter-section-simple">
+            <h3>📧 Ikuti Produk Terbaru</h3>
+            <form class="newsletter-form-simple">
+                <input type="email" placeholder="Email Anda" required>
+                <button type="submit" class="btn btn-primary">Subscribe</button>
+            </form>
+        </section>
+
+        <!-- Admin Button (Hidden, accessible only via keyboard shortcut) -->
+        <button id="admin-access-btn" style="display: none;"></button>
+    </div>
+
+    <!-- Admin Password Modal -->
+    <div class="modal" id="admin-password-modal">
+        <div class="modal-content password-modal">
+            <div class="modal-header">
+                <h2>🔐 Admin Login</h2>
+                <button class="btn-close" onclick="closeAdminModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="password-form" onsubmit="handleAdminLogin(event)">
+                <p class="password-description">Hanya admin yang dapat mengakses portal admin. Masukkan username dan password.</p>
+                <div class="form-group">
+                    <label for="admin-username">Username</label>
+                    <input type="text" id="admin-username" class="password-input" placeholder="Username..." required>
+                </div>
+                <div class="form-group">
+                    <label for="admin-password-input">Password</label>
+                    <input type="password" id="admin-password-input" class="password-input" placeholder="Password..." autofocus required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAdminModal()">Batal</button>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </div>
+            </form>
+            <div id="password-error" class="password-error" style="display: none;">
+                <i class="fas fa-exclamation-circle"></i> <span id="error-message">Username atau password salah</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
