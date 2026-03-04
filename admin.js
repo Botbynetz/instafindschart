@@ -4,9 +4,6 @@
 const ADMIN_TOKEN_KEY = 'instafinds_admin_token';
 const ADMIN_CREDENTIALS_TOKEN = 'admin_token_instafinds';
 
-// ========================
-// AUTH CHECK
-// ========================
 function verifyAdminAccess() {
     const sessionToken = sessionStorage.getItem(ADMIN_TOKEN_KEY);
     if (!sessionToken || sessionToken !== ADMIN_CREDENTIALS_TOKEN) {
@@ -37,9 +34,9 @@ function goBackToPublic(event) {
 // ========================
 // STATE
 // ========================
-let products = [];
-let categories = [];
-let editingProductId = null;
+var products = [];
+var categories = [];
+var editingProductId = null;
 
 // ========================
 // INIT
@@ -52,10 +49,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ========================
-// CATEGORIES (localStorage ok untuk admin-only data)
+// CATEGORIES (localStorage)
 // ========================
 function loadCategoriesFromStorage() {
-    const stored = localStorage.getItem('instafinds_categories');
+    var stored = localStorage.getItem('instafinds_categories');
     categories = stored ? JSON.parse(stored) : [];
 }
 
@@ -83,19 +80,19 @@ function initDefaultCategories() {
 // ========================
 async function loadProductsFromSupabase() {
     try {
-        const { data, error } = await window.supabase
+        var result = await window.supabase
             .from('products')
             .select('*')
-            .order('createdAt', { ascending: false });
+            .order('createdat', { ascending: false });
 
-        if (error) throw error;
+        if (result.error) throw result.error;
 
-        products = data || [];
-        console.log('✅ ' + products.length + ' produk loaded dari Supabase');
+        products = result.data || [];
+        console.log('✅ ' + products.length + ' produk loaded');
         renderDashboard();
     } catch (err) {
         console.error('❌ Error load produk:', err);
-        showNotification('Gagal memuat produk dari database.', 'error');
+        showNotification('Gagal memuat produk: ' + err.message, 'error');
         products = [];
         renderDashboard();
     }
@@ -116,10 +113,8 @@ function setupEventListeners() {
     document.getElementById('product-form').addEventListener('submit', handleProductSubmit);
     document.getElementById('search-products').addEventListener('input', handleProductSearch);
     document.getElementById('btn-fetch-from-link').addEventListener('click', fetchFromAffiliateLink);
-
     document.getElementById('btn-add-category').addEventListener('click', openCategoryModal);
     document.getElementById('category-form').addEventListener('submit', handleCategorySubmit);
-
     document.getElementById('btn-export-data').addEventListener('click', exportData);
     document.getElementById('btn-import-data').addEventListener('click', function() {
         document.getElementById('import-file').click();
@@ -148,7 +143,7 @@ function navigateToPage(pageName) {
         page.classList.remove('active');
     });
 
-    const pageElement = document.getElementById(pageName + '-page');
+    var pageElement = document.getElementById(pageName + '-page');
     if (pageElement) pageElement.classList.add('active');
 
     document.querySelectorAll('.nav-item').forEach(function(link) {
@@ -168,10 +163,10 @@ function navigateToPage(pageName) {
 // DASHBOARD
 // ========================
 function renderDashboard() {
-    const totalProducts = products.length;
-    const totalClicks = products.reduce(function(sum, p) { return sum + (p.clicks || 0); }, 0);
-    const totalViews = products.reduce(function(sum, p) { return sum + (p.views || 0); }, 0);
-    const platformsSet = new Set();
+    var totalProducts = products.length;
+    var totalClicks = products.reduce(function(sum, p) { return sum + (p.clicks || 0); }, 0);
+    var totalViews = products.reduce(function(sum, p) { return sum + (p.views || 0); }, 0);
+    var platformsSet = new Set();
     products.forEach(function(p) {
         if (p.platforms) p.platforms.forEach(function(pl) { platformsSet.add(pl); });
     });
@@ -181,27 +176,23 @@ function renderDashboard() {
     document.getElementById('views-count').textContent = totalViews;
     document.getElementById('active-platforms').textContent = platformsSet.size;
 
-    const recentProducts = products.slice(0, 5);
+    var recentProducts = products.slice(0, 5);
     document.getElementById('recent-products').innerHTML = recentProducts.length > 0
         ? recentProducts.map(function(p) {
             return '<div class="product-item">' +
-                '<img src="' + p.image + '" alt="' + p.name + '" class="product-thumbnail">' +
-                '<div class="product-details">' +
-                    '<h4>' + p.name + '</h4>' +
-                    '<p>Rp ' + (p.price || 0).toLocaleString('id-ID') + '</p>' +
-                '</div></div>';
+                '<img src="' + (p.image || '') + '" alt="' + p.name + '" class="product-thumbnail">' +
+                '<div class="product-details"><h4>' + p.name + '</h4>' +
+                '<p>Rp ' + (p.price || 0).toLocaleString('id-ID') + '</p></div></div>';
           }).join('')
         : '<p class="empty-state">Belum ada produk</p>';
 
-    const topProducts = products.slice().sort(function(a, b) { return (b.clicks || 0) - (a.clicks || 0); }).slice(0, 5);
+    var topProducts = products.slice().sort(function(a, b) { return (b.clicks || 0) - (a.clicks || 0); }).slice(0, 5);
     document.getElementById('top-products').innerHTML = topProducts.length > 0
         ? topProducts.map(function(p) {
             return '<div class="product-item">' +
-                '<img src="' + p.image + '" alt="' + p.name + '" class="product-thumbnail">' +
-                '<div class="product-details">' +
-                    '<h4>' + p.name + '</h4>' +
-                    '<p>' + (p.clicks || 0) + ' klik</p>' +
-                '</div></div>';
+                '<img src="' + (p.image || '') + '" alt="' + p.name + '" class="product-thumbnail">' +
+                '<div class="product-details"><h4>' + p.name + '</h4>' +
+                '<p>' + (p.clicks || 0) + ' klik</p></div></div>';
           }).join('')
         : '<p class="empty-state">Belum ada data klik</p>';
 }
@@ -210,22 +201,19 @@ function renderDashboard() {
 // RENDER PRODUCTS
 // ========================
 function renderProducts(searchQuery) {
-    let filteredProducts = products;
-    if (searchQuery) {
-        filteredProducts = products.filter(function(p) {
-            return p.name.toLowerCase().includes(searchQuery.toLowerCase());
-        });
-    }
+    var filteredProducts = searchQuery
+        ? products.filter(function(p) { return p.name.toLowerCase().includes(searchQuery.toLowerCase()); })
+        : products;
 
     document.getElementById('products-list').innerHTML = filteredProducts.length > 0
         ? filteredProducts.map(function(product) {
             return '<div class="product-card-admin">' +
-                '<div class="product-card-image"><img src="' + product.image + '" alt="' + product.name + '"></div>' +
+                '<div class="product-card-image"><img src="' + (product.image || '') + '" alt="' + product.name + '"></div>' +
                 '<div class="product-card-info">' +
                     '<h3>' + product.name + '</h3>' +
                     '<div class="product-card-price">' +
                         '<span>Rp ' + (product.price || 0).toLocaleString('id-ID') + '</span>' +
-                        '<span style="color:#999;text-decoration:line-through">Rp ' + (product.originalPrice || 0).toLocaleString('id-ID') + '</span>' +
+                        '<span style="color:#999;text-decoration:line-through">Rp ' + (product.originalprice || 0).toLocaleString('id-ID') + '</span>' +
                     '</div>' +
                     '<div class="product-card-meta">' +
                         '<span>⭐ ' + (product.rating || 0) + ' (' + (product.reviews || 0) + ')</span>' +
@@ -241,9 +229,7 @@ function renderProducts(searchQuery) {
         : '<div class="empty-state">Belum ada produk. Klik "Tambah Produk" untuk mulai.</div>';
 }
 
-function handleProductSearch(e) {
-    renderProducts(e.target.value);
-}
+function handleProductSearch(e) { renderProducts(e.target.value); }
 
 // ========================
 // PRODUCT MODAL
@@ -254,17 +240,17 @@ function openProductModal() {
     document.getElementById('product-form').reset();
     document.querySelectorAll('input[name="platform"]').forEach(function(cb) { cb.checked = false; });
 
-    const fileInput = document.getElementById('product-image-file');
-    const previewContainer = document.getElementById('image-preview-container');
-    const dragDropZone = document.getElementById('drag-drop-zone');
+    var fileInput = document.getElementById('product-image-file');
+    var previewContainer = document.getElementById('image-preview-container');
+    var dragDropZone = document.getElementById('drag-drop-zone');
     if (fileInput) fileInput.value = '';
     if (previewContainer) previewContainer.style.display = 'none';
     if (dragDropZone) dragDropZone.style.display = 'block';
 
-    const enableDiscountCheckbox = document.getElementById('enable-discount');
-    const discountPriceGroup = document.getElementById('discount-price-group');
-    const discountPercentGroup = document.getElementById('discount-percent-group');
-    if (enableDiscountCheckbox) enableDiscountCheckbox.checked = false;
+    var enableDiscount = document.getElementById('enable-discount');
+    var discountPriceGroup = document.getElementById('discount-price-group');
+    var discountPercentGroup = document.getElementById('discount-percent-group');
+    if (enableDiscount) enableDiscount.checked = false;
     if (discountPriceGroup) discountPriceGroup.style.display = 'none';
     if (discountPercentGroup) discountPercentGroup.style.display = 'none';
 
@@ -274,59 +260,54 @@ function openProductModal() {
 
 function editProduct(productId) {
     editingProductId = productId;
-    const product = products.find(function(p) { return p.id === productId; });
+    var product = products.find(function(p) { return p.id === productId; });
+    if (!product) return;
 
-    if (product) {
-        document.getElementById('modal-title').textContent = 'Edit Produk';
-        document.getElementById('product-name').value = product.name;
-        document.getElementById('product-image').value = product.image;
-        document.getElementById('product-category').value = product.category;
-        document.getElementById('product-original-price').value = product.originalPrice;
-        document.getElementById('product-price').value = product.price;
-        document.getElementById('product-discount').value = product.discount || '';
-        document.getElementById('product-rating').value = product.rating || '';
-        document.getElementById('product-reviews').value = product.reviews || '';
-        document.getElementById('product-description').value = product.description || '';
-        document.getElementById('product-affiliate-link').value = product.affiliateLink || '';
+    document.getElementById('modal-title').textContent = 'Edit Produk';
+    document.getElementById('product-name').value = product.name;
+    document.getElementById('product-image').value = product.image || '';
+    document.getElementById('product-category').value = product.category;
+    document.getElementById('product-original-price').value = product.originalprice;
+    document.getElementById('product-price').value = product.price;
+    document.getElementById('product-discount').value = product.discount || '';
+    document.getElementById('product-rating').value = product.rating || '';
+    document.getElementById('product-reviews').value = product.reviews || '';
+    document.getElementById('product-description').value = product.description || '';
+    document.getElementById('product-affiliate-link').value = product.affiliatelink || '';
 
-        document.querySelectorAll('input[name="platform"]').forEach(function(cb) {
-            cb.checked = (product.platforms || []).includes(cb.value);
-        });
+    document.querySelectorAll('input[name="platform"]').forEach(function(cb) {
+        cb.checked = (product.platforms || []).includes(cb.value);
+    });
 
-        const previewContainer = document.getElementById('image-preview-container');
-        const previewImg = document.getElementById('image-preview');
-        const dragDropZone = document.getElementById('drag-drop-zone');
-        if (product.image && previewImg && previewContainer && dragDropZone) {
-            previewImg.src = product.image;
-            previewContainer.style.display = 'block';
-            dragDropZone.style.display = 'none';
-        }
-
-        const enableDiscountCheckbox = document.getElementById('enable-discount');
-        const discountPriceGroup = document.getElementById('discount-price-group');
-        const discountPercentGroup = document.getElementById('discount-percent-group');
-        if (product.price < product.originalPrice) {
-            if (enableDiscountCheckbox) enableDiscountCheckbox.checked = true;
-            if (discountPriceGroup) discountPriceGroup.style.display = 'block';
-            if (discountPercentGroup) discountPercentGroup.style.display = 'block';
-        }
-
-        updateCategoryOptions();
-        openModal('product-modal');
+    var previewContainer = document.getElementById('image-preview-container');
+    var previewImg = document.getElementById('image-preview');
+    var dragDropZone = document.getElementById('drag-drop-zone');
+    if (product.image && previewImg && previewContainer && dragDropZone) {
+        previewImg.src = product.image;
+        previewContainer.style.display = 'block';
+        dragDropZone.style.display = 'none';
     }
+
+    var enableDiscount = document.getElementById('enable-discount');
+    var discountPriceGroup = document.getElementById('discount-price-group');
+    var discountPercentGroup = document.getElementById('discount-percent-group');
+    if (product.price < product.originalprice) {
+        if (enableDiscount) enableDiscount.checked = true;
+        if (discountPriceGroup) discountPriceGroup.style.display = 'block';
+        if (discountPercentGroup) discountPercentGroup.style.display = 'block';
+    }
+
+    updateCategoryOptions();
+    openModal('product-modal');
 }
 
 // ========================
 // IMAGE UPLOAD
 // ========================
 function setupImageUpload() {
-    const dragDropZone = document.getElementById('drag-drop-zone');
-    const fileInput = document.getElementById('product-image-file');
-    const productImageInput = document.getElementById('product-image');
-    const previewContainer = document.getElementById('image-preview-container');
-    const previewImg = document.getElementById('image-preview');
-    const removeBtn = document.getElementById('btn-remove-image');
-
+    var dragDropZone = document.getElementById('drag-drop-zone');
+    var fileInput = document.getElementById('product-image-file');
+    var removeBtn = document.getElementById('btn-remove-image');
     if (!dragDropZone) return;
 
     dragDropZone.addEventListener('click', function() { fileInput.click(); });
@@ -343,8 +324,8 @@ function setupImageUpload() {
         removeBtn.addEventListener('click', function(e) {
             e.preventDefault();
             fileInput.value = '';
-            productImageInput.value = '';
-            previewContainer.style.display = 'none';
+            document.getElementById('product-image').value = '';
+            document.getElementById('image-preview-container').style.display = 'none';
             dragDropZone.style.display = 'block';
         });
     }
@@ -354,23 +335,14 @@ function setupImageUpload() {
 }
 
 function handleImageFile(file) {
-    if (!file || !file.type.startsWith('image/')) {
-        alert('Mohon upload file gambar saja!');
-        return;
-    }
-
-    const dragDropZone = document.getElementById('drag-drop-zone');
-    const previewContainer = document.getElementById('image-preview-container');
-    const previewImg = document.getElementById('image-preview');
-    const productImageInput = document.getElementById('product-image');
-
-    const reader = new FileReader();
+    if (!file || !file.type.startsWith('image/')) { alert('Mohon upload file gambar saja!'); return; }
+    var reader = new FileReader();
     reader.onload = function(e) {
-        const base64Data = e.target.result;
-        previewImg.src = base64Data;
-        previewContainer.style.display = 'block';
-        dragDropZone.style.display = 'none';
-        productImageInput.value = base64Data;
+        var base64Data = e.target.result;
+        document.getElementById('image-preview').src = base64Data;
+        document.getElementById('image-preview-container').style.display = 'block';
+        document.getElementById('drag-drop-zone').style.display = 'none';
+        document.getElementById('product-image').value = base64Data;
     };
     reader.readAsDataURL(file);
 }
@@ -379,16 +351,15 @@ function handleImageFile(file) {
 // DISCOUNT TOGGLE
 // ========================
 function setupDiscountToggle() {
-    const enableDiscountCheckbox = document.getElementById('enable-discount');
-    const discountPriceGroup = document.getElementById('discount-price-group');
-    const discountPercentGroup = document.getElementById('discount-percent-group');
-    const originalPriceInput = document.getElementById('product-original-price');
-    const discountPriceInput = document.getElementById('product-price');
-    const discountPercentInput = document.getElementById('product-discount');
+    var enableDiscount = document.getElementById('enable-discount');
+    var discountPriceGroup = document.getElementById('discount-price-group');
+    var discountPercentGroup = document.getElementById('discount-percent-group');
+    var originalPriceInput = document.getElementById('product-original-price');
+    var discountPriceInput = document.getElementById('product-price');
+    var discountPercentInput = document.getElementById('product-discount');
+    if (!enableDiscount) return;
 
-    if (!enableDiscountCheckbox) return;
-
-    enableDiscountCheckbox.addEventListener('change', function(e) {
+    enableDiscount.addEventListener('change', function(e) {
         if (e.target.checked) {
             discountPriceGroup.style.display = 'block';
             discountPercentGroup.style.display = 'block';
@@ -400,65 +371,46 @@ function setupDiscountToggle() {
         }
     });
 
-    function calculateDiscount() {
-        const originalPrice = parseInt(originalPriceInput.value) || 0;
-        const discountPrice = parseInt(discountPriceInput.value) || 0;
-        if (originalPrice > 0 && discountPrice > 0 && discountPrice < originalPrice) {
-            discountPercentInput.value = Math.round(((originalPrice - discountPrice) / originalPrice) * 100);
-        } else {
-            discountPercentInput.value = '';
-        }
+    function calcDiscount() {
+        var orig = parseInt(originalPriceInput.value) || 0;
+        var disc = parseInt(discountPriceInput.value) || 0;
+        discountPercentInput.value = (orig > 0 && disc > 0 && disc < orig)
+            ? Math.round(((orig - disc) / orig) * 100) : '';
     }
 
-    if (originalPriceInput && discountPriceInput) {
-        originalPriceInput.addEventListener('input', calculateDiscount);
-        discountPriceInput.addEventListener('input', calculateDiscount);
-    }
+    originalPriceInput.addEventListener('input', calcDiscount);
+    discountPriceInput.addEventListener('input', calcDiscount);
 }
 
 // ========================
-// FETCH FROM AFFILIATE LINK
+// FETCH FROM LINK
 // ========================
 async function fetchFromAffiliateLink(e) {
     e.preventDefault();
-    const affiliateLink = document.getElementById('product-affiliate-link').value.trim();
+    var affiliateLink = document.getElementById('product-affiliate-link').value.trim();
     if (!affiliateLink) { alert('Masukkan affiliate link terlebih dahulu'); return; }
 
-    const btn = document.getElementById('btn-fetch-from-link');
-    const originalText = btn.innerHTML;
+    var btn = document.getElementById('btn-fetch-from-link');
+    var originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengambil data...';
     btn.disabled = true;
 
     try {
-        const proxies = [
-            'https://api.allorigins.win/get?url=',
-            'https://cors-proxy.htmldriven.com/?url='
-        ];
-
-        let html = '';
-        let success = false;
-
-        for (const proxy of proxies) {
-            try {
-                const response = await fetch(proxy + encodeURIComponent(affiliateLink));
-                if (!response.ok) continue;
-                const data = await response.json();
-                html = data.contents || data;
-                if (html && html.length > 100) { success = true; break; }
-            } catch (err) { continue; }
+        var response = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(affiliateLink));
+        if (response.ok) {
+            var data = await response.json();
+            var html = data.contents;
+            if (html) {
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(html, 'text/html');
+                var title = (doc.querySelector('meta[property="og:title"]') || {}).content || (doc.querySelector('title') || {}).textContent || '';
+                var image = (doc.querySelector('meta[property="og:image"]') || {}).content || '';
+                var desc = (doc.querySelector('meta[property="og:description"]') || {}).content || '';
+                if (title) document.getElementById('product-name').value = title.substring(0, 100);
+                if (image) document.getElementById('product-image').value = image;
+                if (desc) document.getElementById('product-description').value = desc.substring(0, 300);
+            }
         }
-
-        if (success && html) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const title = doc.querySelector('meta[property="og:title"]')?.getAttribute('content') || doc.querySelector('title')?.textContent || '';
-            const image = doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || '';
-            const description = doc.querySelector('meta[property="og:description"]')?.getAttribute('content') || '';
-            if (title) document.getElementById('product-name').value = title.substring(0, 100);
-            if (image) document.getElementById('product-image').value = image;
-            if (description) document.getElementById('product-description').value = description.substring(0, 300);
-        }
-
         autoDetectPlatform(affiliateLink);
         showNotification('✅ Data produk berhasil diambil!', 'success');
     } catch (error) {
@@ -472,84 +424,99 @@ async function fetchFromAffiliateLink(e) {
 
 function autoDetectPlatform(url) {
     try {
-        const hostname = new URL(url).hostname.toLowerCase();
-        const platformMap = { tokopedia: 'tokopedia', shopee: 'shopee', lazada: 'lazada', amazon: 'amazon', bukalapak: 'bukalapak' };
-        for (const [key, platform] of Object.entries(platformMap)) {
+        var hostname = new URL(url).hostname.toLowerCase();
+        var map = { tokopedia: 'tokopedia', shopee: 'shopee', lazada: 'lazada', amazon: 'amazon', bukalapak: 'bukalapak' };
+        for (var key in map) {
             if (hostname.includes(key)) {
-                const checkbox = document.querySelector('input[name="platform"][value="' + platform + '"]');
-                if (checkbox) checkbox.checked = true;
+                var cb = document.querySelector('input[name="platform"][value="' + map[key] + '"]');
+                if (cb) cb.checked = true;
                 break;
             }
         }
-    } catch (e) {}
+    } catch(e) {}
 }
 
 // ========================
-// HANDLE PRODUCT SUBMIT → SUPABASE
+// SAVE PRODUCT → SUPABASE (lowercase columns)
 // ========================
 async function handleProductSubmit(e) {
     e.preventDefault();
 
-    const affiliateLink = document.getElementById('product-affiliate-link').value.trim();
-    const category = document.getElementById('product-category').value;
-    const originalPriceInput = document.getElementById('product-original-price').value.trim();
-    const enableDiscount = document.getElementById('enable-discount').checked;
-    const discountPriceInput = document.getElementById('product-price').value.trim();
+    var affiliateLink = document.getElementById('product-affiliate-link').value.trim();
+    var category = document.getElementById('product-category').value;
+    var originalPriceInput = document.getElementById('product-original-price').value.trim();
+    var enableDiscount = document.getElementById('enable-discount').checked;
+    var discountPriceInput = document.getElementById('product-price').value.trim();
 
     if (!affiliateLink) { alert('Mohon isi Affiliate Link (*)'); return; }
     if (!category) { alert('Mohon pilih kategori produk (*)'); return; }
     if (!originalPriceInput) { alert('Mohon isi Harga Original (*)'); return; }
     if (enableDiscount && !discountPriceInput) { alert('Mohon isi Harga Diskon'); return; }
 
-    const platforms = Array.from(document.querySelectorAll('input[name="platform"]:checked')).map(function(cb) { return cb.value; });
+    var platforms = Array.from(document.querySelectorAll('input[name="platform"]:checked')).map(function(cb) { return cb.value; });
     if (platforms.length === 0) { alert('Pilih minimal satu platform affiliate'); return; }
 
-    let name = document.getElementById('product-name').value.trim() || ('Produk ' + new Date().toLocaleDateString('id-ID'));
-    let image = document.getElementById('product-image').value.trim() || 'https://via.placeholder.com/280x280?text=Produk';
-    const originalPrice = parseInt(originalPriceInput);
-    const price = enableDiscount && discountPriceInput ? parseInt(discountPriceInput) : originalPrice;
-    const discount = enableDiscount && discountPriceInput ? (parseInt(document.getElementById('product-discount').value) || Math.round((1 - price / originalPrice) * 100)) : 0;
-    const rating = parseFloat(document.getElementById('product-rating').value) || 4.5;
-    const reviews = parseInt(document.getElementById('product-reviews').value) || 0;
-    const description = document.getElementById('product-description').value || 'Produk pilihan berkualitas';
+    var name = document.getElementById('product-name').value.trim() || ('Produk ' + new Date().toLocaleDateString('id-ID'));
+    var image = document.getElementById('product-image').value.trim() || 'https://via.placeholder.com/280x280?text=Produk';
+    var originalprice = parseInt(originalPriceInput);
+    var price = enableDiscount && discountPriceInput ? parseInt(discountPriceInput) : originalprice;
+    var discount = enableDiscount && discountPriceInput
+        ? (parseInt(document.getElementById('product-discount').value) || Math.round((1 - price / originalprice) * 100))
+        : 0;
+    var rating = parseFloat(document.getElementById('product-rating').value) || 4.5;
+    var reviews = parseInt(document.getElementById('product-reviews').value) || 0;
+    var description = document.getElementById('product-description').value || 'Produk pilihan berkualitas';
+    var isEditing = editingProductId !== null;
 
-    const isEditing = editingProductId !== null;
-
-    // Tampilkan loading
-    const submitBtn = document.querySelector('#product-form button[type="submit"]');
-    const originalBtnText = submitBtn ? submitBtn.innerHTML : '';
+    var submitBtn = document.querySelector('#product-form button[type="submit"]');
+    var originalBtnText = submitBtn ? submitBtn.innerHTML : '';
     if (submitBtn) { submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...'; submitBtn.disabled = true; }
 
     try {
+        var result;
         if (isEditing) {
-            const { error } = await window.supabase
+            result = await window.supabase
                 .from('products')
                 .update({
-                    name, image, category, originalPrice, price, discount,
-                    rating, reviews, description, affiliateLink, platforms,
-                    updatedAt: new Date().toISOString()
+                    name: name,
+                    image: image,
+                    category: category,
+                    originalprice: originalprice,
+                    price: price,
+                    discount: discount,
+                    rating: rating,
+                    reviews: reviews,
+                    description: description,
+                    affiliatelink: affiliateLink,
+                    platforms: platforms,
+                    updatedat: new Date().toISOString()
                 })
                 .eq('id', editingProductId);
-
-            if (error) throw error;
-            console.log('✅ Produk diupdate di Supabase');
         } else {
-            const newId = Date.now().toString();
-            const { error } = await window.supabase
+            result = await window.supabase
                 .from('products')
                 .insert([{
-                    id: newId, name, image, category, originalPrice, price,
-                    discount, rating, reviews, description, affiliateLink,
-                    platforms, clicks: 0, views: 0,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
+                    id: Date.now().toString(),
+                    name: name,
+                    image: image,
+                    category: category,
+                    originalprice: originalprice,
+                    price: price,
+                    discount: discount,
+                    rating: rating,
+                    reviews: reviews,
+                    description: description,
+                    affiliatelink: affiliateLink,
+                    platforms: platforms,
+                    clicks: 0,
+                    views: 0,
+                    createdat: new Date().toISOString(),
+                    updatedat: new Date().toISOString()
                 }]);
-
-            if (error) throw error;
-            console.log('✅ Produk ditambahkan ke Supabase');
         }
 
-        // Reload dari Supabase
+        if (result.error) throw result.error;
+
         await loadProductsFromSupabase();
         closeModal('product-modal');
         renderProducts();
@@ -565,18 +532,13 @@ async function handleProductSubmit(e) {
 }
 
 // ========================
-// DELETE PRODUCT → SUPABASE
+// DELETE PRODUCT
 // ========================
 function deleteProduct(productId) {
     showConfirm('Hapus Produk?', 'Apakah Anda yakin ingin menghapus produk ini?', async function() {
         try {
-            const { error } = await window.supabase
-                .from('products')
-                .delete()
-                .eq('id', productId);
-
-            if (error) throw error;
-
+            var result = await window.supabase.from('products').delete().eq('id', productId);
+            if (result.error) throw result.error;
             await loadProductsFromSupabase();
             renderProducts();
             showNotification('✅ Produk berhasil dihapus.', 'success');
@@ -588,8 +550,8 @@ function deleteProduct(productId) {
 }
 
 function updateCategoryOptions() {
-    const select = document.getElementById('product-category');
-    const currentValue = select.value;
+    var select = document.getElementById('product-category');
+    var currentValue = select.value;
     select.innerHTML = '<option value="">Pilih kategori</option>' +
         categories.map(function(cat) {
             return '<option value="' + cat.id + '">' + cat.name + '</option>';
@@ -601,14 +563,14 @@ function updateCategoryOptions() {
 // CATEGORIES
 // ========================
 function renderCategories() {
-    document.getElementById('categories-list').innerHTML = categories.map(function(category) {
+    document.getElementById('categories-list').innerHTML = categories.map(function(cat) {
         return '<div class="category-card-admin">' +
-            '<div class="category-card-icon"><i class="' + category.icon + '"></i></div>' +
-            '<h3>' + category.name + '</h3>' +
-            '<p class="category-card-desc">' + (category.description || '') + '</p>' +
+            '<div class="category-card-icon"><i class="' + cat.icon + '"></i></div>' +
+            '<h3>' + cat.name + '</h3>' +
+            '<p class="category-card-desc">' + (cat.description || '') + '</p>' +
             '<div class="category-card-actions">' +
-                '<button class="btn-edit" onclick="editCategory(\'' + category.id + '\')"><i class="fas fa-edit"></i></button>' +
-                '<button class="btn-delete" onclick="deleteCategory(\'' + category.id + '\')"><i class="fas fa-trash"></i></button>' +
+                '<button class="btn-edit" onclick="editCategory(\'' + cat.id + '\')"><i class="fas fa-edit"></i></button>' +
+                '<button class="btn-delete" onclick="deleteCategory(\'' + cat.id + '\')"><i class="fas fa-trash"></i></button>' +
             '</div></div>';
     }).join('') || '<p class="empty-state">Belum ada kategori</p>';
 }
@@ -620,19 +582,18 @@ function openCategoryModal() {
 }
 
 function editCategory(categoryId) {
-    const category = categories.find(function(c) { return c.id == categoryId; });
-    if (category) {
-        document.querySelector('#category-modal .modal-header h2').textContent = 'Edit Kategori';
-        document.getElementById('category-name').value = category.name;
-        document.getElementById('category-icon').value = category.icon;
-        document.getElementById('category-description').value = category.description || '';
-        document.getElementById('category-form').dataset.editId = categoryId;
-        openModal('category-modal');
-    }
+    var cat = categories.find(function(c) { return c.id == categoryId; });
+    if (!cat) return;
+    document.querySelector('#category-modal .modal-header h2').textContent = 'Edit Kategori';
+    document.getElementById('category-name').value = cat.name;
+    document.getElementById('category-icon').value = cat.icon;
+    document.getElementById('category-description').value = cat.description || '';
+    document.getElementById('category-form').dataset.editId = categoryId;
+    openModal('category-modal');
 }
 
 function deleteCategory(categoryId) {
-    const inUse = products.filter(function(p) { return p.category == categoryId; }).length;
+    var inUse = products.filter(function(p) { return p.category == categoryId; }).length;
     if (inUse > 0) { alert('Tidak bisa menghapus kategori yang masih memiliki ' + inUse + ' produk'); return; }
     showConfirm('Hapus Kategori?', 'Apakah Anda yakin?', function() {
         categories = categories.filter(function(c) { return c.id != categoryId; });
@@ -643,19 +604,18 @@ function deleteCategory(categoryId) {
 
 function handleCategorySubmit(e) {
     e.preventDefault();
-    const name = document.getElementById('category-name').value;
-    const icon = document.getElementById('category-icon').value;
-    const description = document.getElementById('category-description').value;
-    const editId = document.getElementById('category-form').dataset.editId;
-
+    var name = document.getElementById('category-name').value;
+    var icon = document.getElementById('category-icon').value;
+    var description = document.getElementById('category-description').value;
+    var editId = document.getElementById('category-form').dataset.editId;
     if (!name || !icon) { alert('Mohon isi semua field yang diperlukan'); return; }
 
     if (editId) {
-        const index = categories.findIndex(function(c) { return c.id == editId; });
-        categories[index] = { id: parseInt(editId), name, icon, description };
+        var index = categories.findIndex(function(c) { return c.id == editId; });
+        categories[index] = { id: parseInt(editId), name: name, icon: icon, description: description };
     } else {
-        const newId = categories.length > 0 ? Math.max.apply(null, categories.map(function(c) { return c.id; })) + 1 : 1;
-        categories.push({ id: newId, name, icon, description });
+        var newId = categories.length > 0 ? Math.max.apply(null, categories.map(function(c) { return c.id; })) + 1 : 1;
+        categories.push({ id: newId, name: name, icon: icon, description: description });
     }
 
     saveCategoriesLocally();
@@ -666,13 +626,12 @@ function handleCategorySubmit(e) {
 }
 
 // ========================
-// EXPORT / IMPORT
+// EXPORT / IMPORT / RESET
 // ========================
 async function exportData() {
-    const data = { products, categories, exportDate: new Date().toISOString() };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    var blob = new Blob([JSON.stringify({ products: products, categories: categories, exportDate: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
     link.href = url;
     link.download = 'instafinds-backup-' + new Date().toISOString().split('T')[0] + '.json';
     link.click();
@@ -681,44 +640,33 @@ async function exportData() {
 }
 
 function importData(e) {
-    const file = e.target.files[0];
+    var file = e.target.files[0];
     if (!file) return;
-
-    const reader = new FileReader();
+    var reader = new FileReader();
     reader.onload = async function(event) {
         try {
-            const data = JSON.parse(event.target.result);
+            var data = JSON.parse(event.target.result);
             if (data.products && data.categories) {
-                // Import produk ke Supabase
-                for (const product of data.products) {
-                    await window.supabase.from('products').upsert([product]);
+                for (var i = 0; i < data.products.length; i++) {
+                    await window.supabase.from('products').upsert([data.products[i]]);
                 }
                 categories = data.categories;
                 saveCategoriesLocally();
                 await loadProductsFromSupabase();
                 renderDashboard();
                 showNotification('Data berhasil di-import!', 'success');
-            } else {
-                alert('Format file tidak valid');
-            }
-        } catch (error) {
-            alert('Gagal membaca file: ' + error.message);
-        }
+            } else { alert('Format file tidak valid'); }
+        } catch (error) { alert('Gagal membaca file: ' + error.message); }
     };
     reader.readAsText(file);
     e.target.value = '';
 }
 
 async function resetAllData() {
-    showConfirm('Reset Semua Data?', 'Tindakan ini akan menghapus SEMUA produk dari database. Tidak bisa di-undo!', async function() {
+    showConfirm('Reset Semua Data?', 'Tindakan ini akan menghapus SEMUA produk. Tidak bisa di-undo!', async function() {
         try {
-            const { error } = await window.supabase
-                .from('products')
-                .delete()
-                .neq('id', '');
-
-            if (error) throw error;
-
+            var result = await window.supabase.from('products').delete().neq('id', '');
+            if (result.error) throw result.error;
             categories = [];
             saveCategoriesLocally();
             await loadProductsFromSupabase();
@@ -726,8 +674,7 @@ async function resetAllData() {
             renderDashboard();
             showNotification('Semua data telah direset', 'success');
         } catch (err) {
-            console.error('❌ Error reset:', err);
-            showNotification('❌ Gagal reset data: ' + err.message, 'error');
+            showNotification('❌ Gagal reset: ' + err.message, 'error');
         }
     });
 }
@@ -736,12 +683,12 @@ async function resetAllData() {
 // MODALS
 // ========================
 function openModal(modalId) {
-    const modal = document.getElementById(modalId);
+    var modal = document.getElementById(modalId);
     if (modal) modal.classList.add('active');
 }
 
 function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
+    var modal = document.getElementById(modalId);
     if (modal) modal.classList.remove('active');
 }
 
@@ -754,18 +701,15 @@ document.addEventListener('click', function(e) {
 // ========================
 function showNotification(message, type) {
     type = type || 'info';
-    const notification = document.createElement('div');
-    const bgColor = type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : type === 'warning' ? '#ff9800' : '#2196f3';
-    notification.style.cssText =
-        'position:fixed;top:20px;right:20px;padding:15px 20px;' +
-        'background:' + bgColor + ';color:white;border-radius:8px;' +
-        'box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:3000;animation:slideIn 0.3s ease;';
+    var colors = { success: '#4CAF50', error: '#f44336', warning: '#ff9800', info: '#2196f3' };
+    var notification = document.createElement('div');
+    notification.style.cssText = 'position:fixed;top:20px;right:20px;padding:15px 20px;background:' + (colors[type] || colors.info) + ';color:white;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:3000;animation:slideIn 0.3s ease;max-width:350px;word-break:break-word;';
     notification.textContent = message;
     document.body.appendChild(notification);
     setTimeout(function() {
         notification.style.animation = 'slideOut 0.3s ease';
         setTimeout(function() { notification.remove(); }, 300);
-    }, 3000);
+    }, 4000);
 }
 
 function showConfirm(title, message, onConfirm) {
@@ -781,11 +725,8 @@ function showConfirm(title, message, onConfirm) {
 function logout() { logoutAdmin(); }
 function toggleMobileMenu() { document.querySelector('.sidebar').classList.toggle('active'); }
 
-// Animations
-const style = document.createElement('style');
-style.textContent =
-    '@keyframes slideIn { from { transform:translateX(400px);opacity:0; } to { transform:translateX(0);opacity:1; } }' +
-    '@keyframes slideOut { from { transform:translateX(0);opacity:1; } to { transform:translateX(400px);opacity:0; } }';
+var style = document.createElement('style');
+style.textContent = '@keyframes slideIn{from{transform:translateX(400px);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(400px);opacity:0}}';
 document.head.appendChild(style);
 
 console.log('✅ Admin Panel loaded!');
