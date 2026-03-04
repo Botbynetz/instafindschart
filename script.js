@@ -145,8 +145,6 @@ async function loadProductsFromStorage() {
             console.error('Error loading products:', error);
         }
     }
-        }
-    }
 }
 
 function renderProductsFromAdmin(products) {
@@ -506,4 +504,3 @@ setInterval(() => {
 // PAGE READY - INITIALIZATION COMPLETE
 // ========================
 console.log('✅ Instafinds.id Affiliate Store loaded successfully!');
-
