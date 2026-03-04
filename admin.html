@@ -270,13 +270,16 @@
                         <div id="images-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(100px,1fr)); gap:8px;"></div>
                     </div>
 
-                    <!-- URL manual -->
+                    <!-- URL manual - bisa banyak sekaligus -->
                     <div style="margin-top:10px;">
-                        <label style="font-size:12px; color:#888;">atau tambah via URL</label>
-                        <div style="display:flex; gap:8px; margin-top:4px;">
-                            <input type="url" id="product-image-url-input" placeholder="https://..." style="flex:1; font-size:13px; padding:8px 10px; border:1px solid #ddd; border-radius:6px;">
-                            <button type="button" id="btn-add-url-image" style="padding:8px 14px; background:#667eea; color:white; border:none; border-radius:6px; cursor:pointer; font-size:13px; white-space:nowrap;">
-                                <i class="fas fa-plus"></i> Tambah
+                        <label style="font-size:12px; color:#888;">
+                            atau tambah via URL
+                            <span style="color:#bbb; font-weight:normal;"> — bisa paste banyak URL, pisahkan dengan Enter atau koma</span>
+                        </label>
+                        <div style="display:flex; gap:8px; margin-top:4px; align-items:flex-start;">
+                            <textarea id="product-image-url-input" placeholder="https://url-gambar-1.jpg&#10;https://url-gambar-2.jpg&#10;https://url-gambar-3.jpg" rows="3" style="flex:1; font-size:12px; padding:8px 10px; border:1px solid #ddd; border-radius:6px; resize:vertical; font-family:monospace; line-height:1.5;"></textarea>
+                            <button type="button" id="btn-add-url-image" style="padding:8px 14px; background:#667eea; color:white; border:none; border-radius:6px; cursor:pointer; font-size:13px; white-space:nowrap; align-self:flex-start;">
+                                <i class="fas fa-plus"></i> Tambah Semua
                             </button>
                         </div>
                     </div>
