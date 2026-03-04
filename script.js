@@ -121,17 +121,42 @@ function renderProducts(products) {
         productCard.style.animation = 'fadeInUp 0.6s ease backwards';
         productCard.style.animationDelay = (index * 0.05) + 's';
 
-        var imgSrc = product.image || 'https://via.placeholder.com/280x280?text=No+Image';
-        // Use affiliatelink (lowercase)
+        // Support multi-image array
+        var images = [];
+        if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+            images = product.images;
+        } else if (product.image) {
+            images = [product.image];
+        } else {
+            images = ['https://via.placeholder.com/280x280?text=No+Image'];
+        }
+
         var affLink = product.affiliatelink || '#';
+
+        // Build carousel slides
+        var slidesHTML = images.map(function(img) {
+            return '<div class="product-image"><img src="' + img + '" alt="' + product.name + '" loading="lazy"></div>';
+        }).join('');
+
+        // Build indicators (only if > 1 image)
+        var indicatorsHTML = '';
+        var navHTML = '';
+        if (images.length > 1) {
+            indicatorsHTML = '<div class="carousel-indicators">' +
+                images.map(function(_, i) {
+                    return '<button class="carousel-indicator' + (i === 0 ? ' active' : '') + '" data-slide="' + i + '"></button>';
+                }).join('') +
+            '</div>';
+            navHTML =
+                '<button class="carousel-nav carousel-prev" aria-label="Prev"><i class="fas fa-chevron-left"></i></button>' +
+                '<button class="carousel-nav carousel-next" aria-label="Next"><i class="fas fa-chevron-right"></i></button>';
+        }
 
         productCard.innerHTML =
             '<div class="product-image-carousel">' +
-                '<div class="product-images-container">' +
-                    '<div class="product-image">' +
-                        '<img src="' + imgSrc + '" alt="' + product.name + '" loading="lazy">' +
-                    '</div>' +
-                '</div>' +
+                '<div class="product-images-container">' + slidesHTML + '</div>' +
+                navHTML +
+                indicatorsHTML +
             '</div>' +
             '<div class="product-info">' +
                 '<h3 class="product-name">' + product.name + '</h3>' +
@@ -142,6 +167,11 @@ function renderProducts(products) {
                     '🔗 Bagikan Produk' +
                 '</button>' +
             '</div>';
+
+        // Init carousel if multiple images
+        if (images.length > 1) {
+            initCarousel(productCard);
+        }
 
         productsGrid.appendChild(productCard);
     });
@@ -190,6 +220,40 @@ function fallbackCopy(text) {
         showNotification('❌ Gagal menyalin link.');
     }
     document.body.removeChild(textarea);
+}
+
+// ========================
+// CAROUSEL
+// ========================
+function initCarousel(cardEl) {
+    var container = cardEl.querySelector('.product-images-container');
+    var indicators = cardEl.querySelectorAll('.carousel-indicator');
+    var prevBtn = cardEl.querySelector('.carousel-prev');
+    var nextBtn = cardEl.querySelector('.carousel-next');
+    var slides = cardEl.querySelectorAll('.product-image');
+    var total = slides.length;
+    var current = 0;
+
+    function goTo(n) {
+        current = (n + total) % total;
+        container.style.transform = 'translateX(-' + (current * 100) + '%)';
+        indicators.forEach(function(ind, i) {
+            ind.classList.toggle('active', i === current);
+        });
+    }
+
+    if (prevBtn) prevBtn.addEventListener('click', function(e) { e.stopPropagation(); goTo(current - 1); });
+    if (nextBtn) nextBtn.addEventListener('click', function(e) { e.stopPropagation(); goTo(current + 1); });
+    indicators.forEach(function(ind, i) {
+        ind.addEventListener('click', function(e) { e.stopPropagation(); goTo(i); });
+    });
+
+    // Auto slide every 4 seconds
+    var autoSlide = setInterval(function() { goTo(current + 1); }, 4000);
+    cardEl.addEventListener('mouseenter', function() { clearInterval(autoSlide); });
+    cardEl.addEventListener('mouseleave', function() {
+        autoSlide = setInterval(function() { goTo(current + 1); }, 4000);
+    });
 }
 
 // ========================
