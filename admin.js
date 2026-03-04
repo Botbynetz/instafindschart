@@ -436,7 +436,7 @@ function renderImagesGrid() {
     grid.innerHTML = uploadedImages.map(function(url, index) {
         return '<div class="img-thumb-item" style="position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1;background:#f0f0f0;">' +
             (index === 0 ? '<span style="position:absolute;top:4px;left:4px;background:#667eea;color:white;font-size:10px;padding:2px 6px;border-radius:4px;z-index:2;">Utama</span>' : '') +
-            '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='https://via.placeholder.com/100x100?text=Error'">' +
+            '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;">' +
             '<div style="position:absolute;top:4px;right:4px;display:flex;gap:3px;">' +
                 (index > 0 ? '<button type="button" onclick="moveImageLeft(' + index + ')" style="width:22px;height:22px;background:rgba(0,0,0,0.6);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;" title="Geser kiri">◀</button>' : '') +
                 (index < uploadedImages.length - 1 ? '<button type="button" onclick="moveImageRight(' + index + ')" style="width:22px;height:22px;background:rgba(0,0,0,0.6);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;" title="Geser kanan">▶</button>' : '') +
