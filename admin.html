@@ -245,24 +245,46 @@
                     <input type="text" id="product-name" placeholder="Nama produk">
                 </div>
 
-                <div class="form-group">
-                    <label>Gambar Produk <small>(Upload atau masukkan URL)</small></label>
-                    <div class="image-upload-container">
-                        <div class="drag-drop-zone" id="drag-drop-zone">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <p>Drag & drop gambar di sini</p>
-                            <small>atau klik untuk upload</small>
+                <div class="form-group full-width">
+                    <label>📸 Foto Produk <small>(Upload banyak foto, max 10 foto)</small></label>
+
+                    <!-- Drop Zone -->
+                    <div class="drag-drop-zone" id="drag-drop-zone">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Drag & drop foto di sini atau klik untuk pilih</p>
+                        <small>PNG, JPG, WEBP • Max 32MB per foto • Bisa pilih banyak sekaligus</small>
+                    </div>
+                    <input type="file" id="product-image-file" accept="image/*" multiple style="display:none;">
+
+                    <!-- Grid Preview Foto -->
+                    <div id="images-preview-grid" style="display:none; margin-top:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-size:13px; color:#666;">
+                                <span id="images-count">0</span> foto dipilih
+                                <small style="color:#999;">(geser untuk ubah urutan)</small>
+                            </span>
+                            <button type="button" id="btn-add-more-images" style="font-size:12px; padding:4px 10px; background:#667eea; color:white; border:none; border-radius:6px; cursor:pointer;">
+                                <i class="fas fa-plus"></i> Tambah Foto
+                            </button>
                         </div>
-                        <input type="file" id="product-image-file" accept="image/*" style="display: none;">
-                        <div class="image-preview-container" id="image-preview-container" style="display: none;">
-                            <img id="image-preview" src="" alt="Preview">
-                            <button type="button" class="btn-remove-image" id="btn-remove-image" title="Hapus gambar">
-                                <i class="fas fa-times"></i>
+                        <div id="images-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(100px,1fr)); gap:8px;"></div>
+                    </div>
+
+                    <!-- URL manual -->
+                    <div style="margin-top:10px;">
+                        <label style="font-size:12px; color:#888;">atau tambah via URL</label>
+                        <div style="display:flex; gap:8px; margin-top:4px;">
+                            <input type="url" id="product-image-url-input" placeholder="https://..." style="flex:1; font-size:13px; padding:8px 10px; border:1px solid #ddd; border-radius:6px;">
+                            <button type="button" id="btn-add-url-image" style="padding:8px 14px; background:#667eea; color:white; border:none; border-radius:6px; cursor:pointer; font-size:13px; white-space:nowrap;">
+                                <i class="fas fa-plus"></i> Tambah
                             </button>
                         </div>
                     </div>
-                    <label style="margin-top: 10px;">atau masukkan URL gambar</label>
-                    <input type="url" id="product-image" placeholder="https://..." style="margin-top: 5px;">
+
+                    <!-- Hidden input menyimpan array URL -->
+                    <input type="hidden" id="product-images" value="[]">
+                    <!-- Backward compat: first image -->
+                    <input type="hidden" id="product-image" value="">
                 </div>
 
                 <div class="form-group">
