@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Instafinds.id</title>
+    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-admin">
+                <i class="fas fa-cog"></i>
+                <span>Instafinds Admin</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#dashboard" class="nav-item active" data-page="dashboard">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#products" class="nav-item" data-page="products">
+                <i class="fas fa-box"></i>
+                <span>Kelola Produk</span>
+            </a>
+            <a href="#categories" class="nav-item" data-page="categories">
+                <i class="fas fa-th"></i>
+                <span>Kategori</span>
+            </a>
+            <a href="#settings" class="nav-item" data-page="settings">
+                <i class="fas fa-sliders-h"></i>
+                <span>Setelan</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="index.html" class="btn-back-public" onclick="return goBackToPublic(event)">
+                <i class="fas fa-arrow-left"></i>
+                <span>Kembali ke Etalase</span>
+            </a>
+            <button class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <button class="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1 class="page-title">Dashboard</h1>
+            </div>
+            <div class="top-bar-right">
+                <div class="user-info">
+                    <img src="https://via.placeholder.com/40x40?text=Admin" alt="Admin" class="user-avatar">
+                    <span class="user-name">Admin Instafinds</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pages Container -->
+        <div class="pages-container">
+            <!-- Dashboard Page -->
+            <div class="page" id="dashboard-page" data-page="dashboard">
+                <div class="dashboard-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-box"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Total Produk</h3>
+                            <p class="stat-value" id="total-products">0</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-mouse"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Total Klik</h3>
+                            <p class="stat-value" id="total-clicks">0</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Produk Dilihat</h3>
+                            <p class="stat-value" id="views-count">0</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-link"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Platform Aktif</h3>
+                            <p class="stat-value" id="active-platforms">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-section">
+                    <h2>Produk Terbaru</h2>
+                    <div class="recent-products" id="recent-products">
+                        <p class="empty-state">Belum ada produk. <a href="#" class="nav-item" data-page="products">Tambah produk sekarang</a></p>
+                    </div>
+                </div>
+
+                <div class="dashboard-section">
+                    <h2>Top Produk</h2>
+                    <div class="top-products" id="top-products">
+                        <p class="empty-state">Belum ada data klik produk</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Management Page -->
+            <div class="page" id="products-page" data-page="products">
+                <div class="page-header">
+                    <h2>Kelola Produk</h2>
+                    <div class="header-actions">
+                        <input type="text" class="search-input" id="search-products" placeholder="Cari produk...">
+                        <button class="btn btn-primary" id="btn-add-product">
+                            <i class="fas fa-plus"></i> Tambah Produk
+                        </button>
+                    </div>
+                </div>
+
+                <div class="products-list" id="products-list">
+                    <p class="empty-state">Belum ada produk. Klik tombol "Tambah Produk" untuk mulai.</p>
+                </div>
+            </div>
+
+            <!-- Categories Page -->
+            <div class="page" id="categories-page" data-page="categories">
+                <div class="page-header">
+                    <h2>Kelola Kategori</h2>
+                    <button class="btn btn-primary" id="btn-add-category">
+                        <i class="fas fa-plus"></i> Tambah Kategori
+                    </button>
+                </div>
+
+                <div class="categories-grid" id="categories-list">
+                    <p class="empty-state">Belum ada kategori.</p>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div class="page" id="settings-page" data-page="settings">
+                <div class="page-header">
+                    <h2>Setelan</h2>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Data Management</h3>
+                    <div class="setting-card">
+                        <div class="setting-info">
+                            <h4>Backup Data</h4>
+                            <p>Download semua data produk dalam format JSON</p>
+                        </div>
+                        <button class="btn btn-secondary" id="btn-export-data">
+                            <i class="fas fa-download"></i> Export JSON
+                        </button>
+                    </div>
+
+                    <div class="setting-card">
+                        <div class="setting-info">
+                            <h4>Restore Data</h4>
+                            <p>Upload file JSON untuk restore data</p>
+                        </div>
+                        <input type="file" id="import-file" accept=".json" style="display:none;">
+                        <button class="btn btn-secondary" id="btn-import-data">
+                            <i class="fas fa-upload"></i> Import JSON
+                        </button>
+                    </div>
+
+                    <div class="setting-card">
+                        <div class="setting-info">
+                            <h4>Reset All Data</h4>
+                            <p>Hapus semua produk dan kategori (tidak bisa di-undo!)</p>
+                        </div>
+                        <button class="btn btn-danger" id="btn-reset-data">
+                            <i class="fas fa-trash"></i> Reset Semua
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Info Sistem</h3>
+                    <div class="info-box">
+                        <p><strong>URL Website:</strong> https://botbynetz.github.io/Instafinds/</p>
+                        <p><strong>URL Admin:</strong> <code>admin.html</code></p>
+                        <p><strong>Storage:</strong> Browser LocalStorage (Max ~5MB)</p>
+                        <p><strong>Version:</strong> 1.0.0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Add/Edit Product -->
+    <div class="modal" id="product-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Tambah Produk Baru</h2>
+                <button class="btn-close" data-close="product-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="product-form" class="form-grid">
+                <div class="form-group full-width">
+                    <label><strong>Affiliate Link *</strong> <small>(Wajib diisi untuk auto-fetch)</small></label>
+                    <div class="input-with-button">
+                        <input type="url" id="product-affiliate-link" placeholder="https://tokopedia.com/..." required>
+                        <button type="button" class="btn btn-info" id="btn-fetch-from-link" title="Otomatis ambil data produk dari link">
+                            <i class="fas fa-magic"></i> Ambil Data
+                        </button>
+                    </div>
+                    <small style="color: #666; margin-top: 5px; display: block;">Klik "Ambil Data" untuk otomatis mengisi nama, gambar, deskripsi dari link</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Kategori *</label>
+                    <select id="product-category" required>
+                        <option value="">Pilih kategori</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Nama Produk <small>(opsional, ambil otomatis dari link)</small></label>
+                    <input type="text" id="product-name" placeholder="Nama produk">
+                </div>
+
+                <div class="form-group">
+                    <label>Gambar Produk <small>(Upload atau masukkan URL)</small></label>
+                    <div class="image-upload-container">
+                        <div class="drag-drop-zone" id="drag-drop-zone">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Drag & drop gambar di sini</p>
+                            <small>atau klik untuk upload</small>
+                        </div>
+                        <input type="file" id="product-image-file" accept="image/*" style="display: none;">
+                        <div class="image-preview-container" id="image-preview-container" style="display: none;">
+                            <img id="image-preview" src="" alt="Preview">
+                            <button type="button" class="btn-remove-image" id="btn-remove-image" title="Hapus gambar">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <label style="margin-top: 10px;">atau masukkan URL gambar</label>
+                    <input type="url" id="product-image" placeholder="https://..." style="margin-top: 5px;">
+                </div>
+
+                <div class="form-group">
+                    <label>Harga Original *</label>
+                    <input type="number" id="product-original-price" placeholder="Rp" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="enable-discount" name="enable-discount">
+                        <span>Produk memiliki diskon</span>
+                    </label>
+                </div>
+
+                <div class="form-group" id="discount-price-group" style="display: none;">
+                    <label>Harga Diskon <small>(otomatis hitung diskon %)</small></label>
+                    <input type="number" id="product-price" placeholder="Rp (harga setelah diskon)" min="0">
+                </div>
+
+                <div class="form-group" id="discount-percent-group" style="display: none;">
+                    <label>Diskon (%)</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="number" id="product-discount" placeholder="30" min="0" max="100" disabled style="flex: 1;">
+                        <small style="padding-top: 10px; color: #888;">Auto</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Rating (0-5)</label>
+                    <input type="number" id="product-rating" placeholder="4.5" min="0" max="5" step="0.1">
+                </div>
+
+                <div class="form-group">
+                    <label>Jumlah Review</label>
+                    <input type="number" id="product-reviews" placeholder="245" min="0">
+                </div>
+
+                <div class="form-group full-width">
+                    <label>Deskripsi</label>
+                    <textarea id="product-description" placeholder="Deskripsi produk..." rows="3"></textarea>
+                </div>
+
+                <div class="form-group full-width">
+                    <label>Platform Affiliate *</label>
+                    <div class="platform-checkboxes">
+                        <label class="checkbox">
+                            <input type="checkbox" name="platform" value="shopee"> Shopee
+                        </label>
+                        <label class="checkbox">
+                            <input type="checkbox" name="platform" value="tokopedia"> Tokopedia
+                        </label>
+                        <label class="checkbox">
+                            <input type="checkbox" name="platform" value="lazada"> Lazada
+                        </label>
+                        <label class="checkbox">
+                            <input type="checkbox" name="platform" value="amazon"> Amazon
+                        </label>
+                        <label class="checkbox">
+                            <input type="checkbox" name="platform" value="bukalapak"> Bukalapak
+                        </label>
+                        <label class="checkbox">
+                            <input type="checkbox" name="platform" value="other"> Lainnya
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" data-close="product-modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Produk</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Add/Edit Category -->
+    <div class="modal" id="category-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Tambah Kategori Baru</h2>
+                <button class="btn-close" data-close="category-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="category-form">
+                <div class="form-group">
+                    <label>Nama Kategori *</label>
+                    <input type="text" id="category-name" placeholder="Nama kategori" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Icon (Gunakan Font Awesome Class) *</label>
+                    <input type="text" id="category-icon" placeholder="fas fa-shirt" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Deskripsi</label>
+                    <textarea id="category-description" placeholder="Deskripsi kategori..." rows="2"></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" data-close="category-modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Kategori</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirmation Dialog -->
+    <div class="modal" id="confirm-modal">
+        <div class="modal-content confirm-modal">
+            <div class="modal-header">
+                <h2 id="confirm-title">Konfirmasi</h2>
+            </div>
+            <p id="confirm-message"></p>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" data-close="confirm-modal">Batal</button>
+                <button type="button" class="btn btn-danger" id="confirm-btn">Hapus</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase Configuration & Functions -->
+    <script src="supabase-config.js"></script>
+    <script src="supabase-functions.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
