@@ -404,15 +404,32 @@ async function uploadToImgbb(file) {
 
 function addImageFromUrl() {
     var input = document.getElementById('product-image-url-input');
-    var url = input ? input.value.trim() : '';
-    if (!url) { alert('Masukkan URL gambar terlebih dahulu!'); return; }
-    if (uploadedImages.length >= 10) { showNotification('❌ Maksimal 10 foto!', 'error'); return; }
+    var raw = input ? input.value.trim() : '';
+    if (!raw) { alert('Masukkan URL gambar terlebih dahulu!'); return; }
 
-    uploadedImages.push(url);
+    // Split by newline atau koma — bisa paste banyak URL sekaligus
+    var urls = raw.split(/[\n,]+/)
+        .map(function(u) { return u.trim(); })
+        .filter(function(u) { return u.length > 0 && (u.startsWith('http://') || u.startsWith('https://')); });
+
+    if (urls.length === 0) { alert('URL tidak valid! Pastikan dimulai dengan https://'); return; }
+
+    var remaining = 10 - uploadedImages.length;
+    if (remaining <= 0) { showNotification('❌ Maksimal 10 foto!', 'error'); return; }
+
+    var toAdd = urls.slice(0, remaining);
+    var skipped = urls.length - toAdd.length;
+
+    toAdd.forEach(function(url) { uploadedImages.push(url); });
     renderImagesGrid();
     syncImagesInput();
     if (input) input.value = '';
-    showNotification('✅ URL gambar ditambahkan!', 'success');
+
+    if (skipped > 0) {
+        showNotification('✅ ' + toAdd.length + ' URL ditambahkan! (' + skipped + ' dilewati, max 10)', 'success');
+    } else {
+        showNotification('✅ ' + toAdd.length + ' URL gambar ditambahkan!', 'success');
+    }
 }
 
 function renderImagesGrid() {
