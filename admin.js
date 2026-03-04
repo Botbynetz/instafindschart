@@ -530,34 +530,85 @@ async function fetchFromAffiliateLink(e) {
 
     var btn = document.getElementById('btn-fetch-from-link');
     var originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengambil data...';
     btn.disabled = true;
 
     try {
+        // Step 1: Ambil metadata halaman
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengambil data...';
         var response = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(affiliateLink));
-        if (response.ok) {
-            var data = await response.json();
-            var html = data.contents;
-            if (html) {
-                var parser = new DOMParser();
-                var doc = parser.parseFromString(html, 'text/html');
-                var title = (doc.querySelector('meta[property="og:title"]') || {}).content || (doc.querySelector('title') || {}).textContent || '';
-                var image = (doc.querySelector('meta[property="og:image"]') || {}).content || '';
-                var desc = (doc.querySelector('meta[property="og:description"]') || {}).content || '';
-                if (title) document.getElementById('product-name').value = title.substring(0, 100);
-                if (image) document.getElementById('product-image').value = image;
-                if (desc) document.getElementById('product-description').value = desc.substring(0, 300);
+
+        if (!response.ok) throw new Error('Gagal fetch halaman');
+
+        var data = await response.json();
+        var html = data.contents;
+
+        if (!html) throw new Error('Konten kosong');
+
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var title = (doc.querySelector('meta[property="og:title"]') || {}).content
+                 || (doc.querySelector('title') || {}).textContent || '';
+        var imageUrl = (doc.querySelector('meta[property="og:image"]') || {}).content || '';
+        var desc = (doc.querySelector('meta[property="og:description"]') || {}).content || '';
+
+        if (title) document.getElementById('product-name').value = title.substring(0, 100);
+        if (desc) document.getElementById('product-description').value = desc.substring(0, 300);
+
+        // Step 2: Mirror gambar ke Imgbb biar tidak bergantung server Shopee/Tokopedia
+        if (imageUrl) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Upload gambar ke Imgbb...';
+            try {
+                var mirroredUrl = await mirrorImageToImgbb(imageUrl);
+                // Tambahkan ke grid multi-foto
+                uploadedImages = [mirroredUrl];
+                renderImagesGrid();
+                syncImagesInput();
+                showNotification('✅ Data & gambar berhasil diambil!', 'success');
+            } catch (imgErr) {
+                // Fallback: pakai URL asli kalau mirror gagal
+                console.warn('⚠️ Mirror gagal, pakai URL asli:', imgErr);
+                uploadedImages = [imageUrl];
+                renderImagesGrid();
+                syncImagesInput();
+                showNotification('✅ Data diambil! (Gambar dari server asli)', 'success');
             }
+        } else {
+            showNotification('✅ Data produk berhasil diambil! (Tanpa gambar)', 'success');
         }
+
         autoDetectPlatform(affiliateLink);
-        showNotification('✅ Data produk berhasil diambil!', 'success');
+
     } catch (error) {
+        console.error('❌ Fetch error:', error);
         autoDetectPlatform(affiliateLink);
         showNotification('⚠️ Gagal fetch otomatis. Isi data manual.', 'warning');
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
     }
+}
+
+// Mirror gambar dari URL eksternal ke Imgbb
+async function mirrorImageToImgbb(imageUrl) {
+    // Pakai allorigins untuk fetch gambar sebagai base64
+    var proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(imageUrl);
+    var response = await fetch(proxyUrl);
+    if (!response.ok) throw new Error('Gagal fetch gambar');
+
+    var blob = await response.blob();
+
+    // Upload blob ke Imgbb
+    var formData = new FormData();
+    formData.append('image', blob, 'product.jpg');
+    formData.append('key', IMGBB_KEY);
+
+    var uploadResp = await fetch('https://api.imgbb.com/1/upload', {
+        method: 'POST',
+        body: formData
+    });
+    var result = await uploadResp.json();
+    if (result.success) return result.data.url;
+    throw new Error(result.error ? result.error.message : 'Upload Imgbb gagal');
 }
 
 function autoDetectPlatform(url) {
