@@ -349,17 +349,56 @@ function setupImageUpload() {
     document.addEventListener('drop', function(e) { e.preventDefault(); });
 }
 
-function handleImageFile(file) {
+async function handleImageFile(file) {
     if (!file || !file.type.startsWith('image/')) { alert('Mohon upload file gambar saja!'); return; }
-    var reader = new FileReader();
-    reader.onload = function(e) {
-        var base64Data = e.target.result;
-        document.getElementById('image-preview').src = base64Data;
-        document.getElementById('image-preview-container').style.display = 'block';
-        document.getElementById('drag-drop-zone').style.display = 'none';
-        document.getElementById('product-image').value = base64Data;
-    };
-    reader.readAsDataURL(file);
+
+    // Tampilkan loading state
+    var dragDropZone = document.getElementById('drag-drop-zone');
+    var previewContainer = document.getElementById('image-preview-container');
+    var previewImg = document.getElementById('image-preview');
+    var productImageInput = document.getElementById('product-image');
+
+    dragDropZone.innerHTML = '<div style="text-align:center;padding:20px;color:#667eea;"><i class="fas fa-spinner fa-spin" style="font-size:30px;display:block;margin-bottom:10px;"></i>Mengupload gambar...</div>';
+
+    try {
+        // Upload ke Imgbb
+        var formData = new FormData();
+        formData.append('image', file);
+        formData.append('key', 'cc40cdc3967a9e03f1a0a190479f5f21');
+
+        var response = await fetch('https://api.imgbb.com/1/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        var result = await response.json();
+
+        if (result.success) {
+            var imageUrl = result.data.url;
+
+            // Tampilkan preview
+            previewImg.src = imageUrl;
+            previewContainer.style.display = 'block';
+            dragDropZone.style.display = 'none';
+
+            // Reset drag drop zone HTML
+            dragDropZone.innerHTML = '<i class="fas fa-cloud-upload-alt"></i><p>Drag & drop gambar atau klik untuk upload</p><span>PNG, JPG, WEBP (Max 32MB)</span>';
+
+            // Simpan URL (bukan base64) ke input
+            productImageInput.value = imageUrl;
+
+            showNotification('✅ Gambar berhasil diupload ke Imgbb!', 'success');
+            console.log('✅ Image uploaded to Imgbb:', imageUrl);
+        } else {
+            throw new Error(result.error ? result.error.message : 'Upload gagal');
+        }
+    } catch (err) {
+        console.error('❌ Error upload gambar:', err);
+        // Reset drag drop zone
+        dragDropZone.innerHTML = '<i class="fas fa-cloud-upload-alt"></i><p>Drag & drop gambar atau klik untuk upload</p><span>PNG, JPG, WEBP (Max 32MB)</span>';
+        dragDropZone.style.display = 'block';
+        showNotification('❌ Gagal upload gambar: ' + err.message, 'error');
+    }
 }
 
 // ========================
