@@ -506,3 +506,4 @@ setInterval(() => {
 // PAGE READY - INITIALIZATION COMPLETE
 // ========================
 console.log('✅ Instafinds.id Affiliate Store loaded successfully!');
+
