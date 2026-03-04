@@ -255,12 +255,7 @@ function openProductModal() {
     document.getElementById('product-form').reset();
     document.querySelectorAll('input[name="platform"]').forEach(function(cb) { cb.checked = false; });
 
-    var fileInput = document.getElementById('product-image-file');
-    var previewContainer = document.getElementById('image-preview-container');
-    var dragDropZone = document.getElementById('drag-drop-zone');
-    if (fileInput) fileInput.value = '';
-    if (previewContainer) previewContainer.style.display = 'none';
-    if (dragDropZone) dragDropZone.style.display = 'block';
+    resetImagesUpload();
 
     var enableDiscount = document.getElementById('enable-discount');
     var discountPriceGroup = document.getElementById('discount-price-group');
@@ -294,14 +289,17 @@ function editProduct(productId) {
         cb.checked = (product.platforms || []).includes(cb.value);
     });
 
-    var previewContainer = document.getElementById('image-preview-container');
-    var previewImg = document.getElementById('image-preview');
-    var dragDropZone = document.getElementById('drag-drop-zone');
-    if (product.image && previewImg && previewContainer && dragDropZone) {
-        previewImg.src = product.image;
-        previewContainer.style.display = 'block';
-        dragDropZone.style.display = 'none';
+    // Load existing images
+    resetImagesUpload();
+    var existingImages = [];
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+        existingImages = product.images;
+    } else if (product.image) {
+        existingImages = [product.image];
     }
+    uploadedImages = existingImages;
+    renderImagesGrid();
+    syncImagesInput();
 
     var enableDiscount = document.getElementById('enable-discount');
     var discountPriceGroup = document.getElementById('discount-price-group');
@@ -317,88 +315,174 @@ function editProduct(productId) {
 }
 
 // ========================
-// IMAGE UPLOAD
+// MULTI IMAGE UPLOAD
 // ========================
+var uploadedImages = []; // array of URLs
+var IMGBB_KEY = 'cc40cdc3967a9e03f1a0a190479f5f21';
+
 function setupImageUpload() {
     var dragDropZone = document.getElementById('drag-drop-zone');
     var fileInput = document.getElementById('product-image-file');
-    var removeBtn = document.getElementById('btn-remove-image');
     if (!dragDropZone) return;
 
     dragDropZone.addEventListener('click', function() { fileInput.click(); });
-    fileInput.addEventListener('change', function(e) { handleImageFile(e.target.files[0]); });
-    dragDropZone.addEventListener('dragover', function(e) { e.preventDefault(); dragDropZone.classList.add('dragover'); });
-    dragDropZone.addEventListener('dragleave', function() { dragDropZone.classList.remove('dragover'); });
+    fileInput.addEventListener('change', function(e) { handleImageFiles(e.target.files); });
+
+    dragDropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dragDropZone.classList.add('dragover');
+    });
+    dragDropZone.addEventListener('dragleave', function() {
+        dragDropZone.classList.remove('dragover');
+    });
     dragDropZone.addEventListener('drop', function(e) {
         e.preventDefault();
         dragDropZone.classList.remove('dragover');
-        if (e.dataTransfer.files.length > 0) handleImageFile(e.dataTransfer.files[0]);
+        if (e.dataTransfer.files.length > 0) handleImageFiles(e.dataTransfer.files);
     });
 
-    if (removeBtn) {
-        removeBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            fileInput.value = '';
-            document.getElementById('product-image').value = '';
-            document.getElementById('image-preview-container').style.display = 'none';
-            dragDropZone.style.display = 'block';
-        });
-    }
+    // Tombol tambah foto lagi
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('#btn-add-more-images')) {
+            fileInput.click();
+        }
+        if (e.target.closest('#btn-add-url-image')) {
+            addImageFromUrl();
+        }
+    });
 
     document.addEventListener('dragover', function(e) { e.preventDefault(); });
     document.addEventListener('drop', function(e) { e.preventDefault(); });
 }
 
-async function handleImageFile(file) {
-    if (!file || !file.type.startsWith('image/')) { alert('Mohon upload file gambar saja!'); return; }
+async function handleImageFiles(files) {
+    if (!files || files.length === 0) return;
 
-    // Tampilkan loading state
-    var dragDropZone = document.getElementById('drag-drop-zone');
-    var previewContainer = document.getElementById('image-preview-container');
-    var previewImg = document.getElementById('image-preview');
-    var productImageInput = document.getElementById('product-image');
+    var fileArray = Array.from(files).filter(function(f) { return f.type.startsWith('image/'); });
+    if (fileArray.length === 0) { alert('Mohon pilih file gambar!'); return; }
 
-    dragDropZone.innerHTML = '<div style="text-align:center;padding:20px;color:#667eea;"><i class="fas fa-spinner fa-spin" style="font-size:30px;display:block;margin-bottom:10px;"></i>Mengupload gambar...</div>';
+    // Max 10 foto
+    var remaining = 10 - uploadedImages.length;
+    if (remaining <= 0) { showNotification('❌ Maksimal 10 foto per produk!', 'error'); return; }
+    fileArray = fileArray.slice(0, remaining);
 
-    try {
-        // Upload ke Imgbb
-        var formData = new FormData();
-        formData.append('image', file);
-        formData.append('key', 'cc40cdc3967a9e03f1a0a190479f5f21');
+    showNotification('⏳ Mengupload ' + fileArray.length + ' foto...', 'info');
 
-        var response = await fetch('https://api.imgbb.com/1/upload', {
-            method: 'POST',
-            body: formData
-        });
-
-        var result = await response.json();
-
-        if (result.success) {
-            var imageUrl = result.data.url;
-
-            // Tampilkan preview
-            previewImg.src = imageUrl;
-            previewContainer.style.display = 'block';
-            dragDropZone.style.display = 'none';
-
-            // Reset drag drop zone HTML
-            dragDropZone.innerHTML = '<i class="fas fa-cloud-upload-alt"></i><p>Drag & drop gambar atau klik untuk upload</p><span>PNG, JPG, WEBP (Max 32MB)</span>';
-
-            // Simpan URL (bukan base64) ke input
-            productImageInput.value = imageUrl;
-
-            showNotification('✅ Gambar berhasil diupload ke Imgbb!', 'success');
-            console.log('✅ Image uploaded to Imgbb:', imageUrl);
-        } else {
-            throw new Error(result.error ? result.error.message : 'Upload gagal');
+    var successCount = 0;
+    for (var i = 0; i < fileArray.length; i++) {
+        try {
+            var url = await uploadToImgbb(fileArray[i]);
+            uploadedImages.push(url);
+            successCount++;
+            renderImagesGrid();
+        } catch (err) {
+            console.error('❌ Gagal upload foto ke-' + (i+1) + ':', err);
         }
-    } catch (err) {
-        console.error('❌ Error upload gambar:', err);
-        // Reset drag drop zone
-        dragDropZone.innerHTML = '<i class="fas fa-cloud-upload-alt"></i><p>Drag & drop gambar atau klik untuk upload</p><span>PNG, JPG, WEBP (Max 32MB)</span>';
-        dragDropZone.style.display = 'block';
-        showNotification('❌ Gagal upload gambar: ' + err.message, 'error');
     }
+
+    if (successCount > 0) {
+        showNotification('✅ ' + successCount + ' foto berhasil diupload!', 'success');
+        syncImagesInput();
+    } else {
+        showNotification('❌ Gagal upload foto.', 'error');
+    }
+}
+
+async function uploadToImgbb(file) {
+    var formData = new FormData();
+    formData.append('image', file);
+    formData.append('key', IMGBB_KEY);
+
+    var response = await fetch('https://api.imgbb.com/1/upload', {
+        method: 'POST',
+        body: formData
+    });
+    var result = await response.json();
+    if (result.success) return result.data.url;
+    throw new Error(result.error ? result.error.message : 'Upload gagal');
+}
+
+function addImageFromUrl() {
+    var input = document.getElementById('product-image-url-input');
+    var url = input ? input.value.trim() : '';
+    if (!url) { alert('Masukkan URL gambar terlebih dahulu!'); return; }
+    if (uploadedImages.length >= 10) { showNotification('❌ Maksimal 10 foto!', 'error'); return; }
+
+    uploadedImages.push(url);
+    renderImagesGrid();
+    syncImagesInput();
+    if (input) input.value = '';
+    showNotification('✅ URL gambar ditambahkan!', 'success');
+}
+
+function renderImagesGrid() {
+    var grid = document.getElementById('images-grid');
+    var gridContainer = document.getElementById('images-preview-grid');
+    var countEl = document.getElementById('images-count');
+    var dragDropZone = document.getElementById('drag-drop-zone');
+
+    if (!grid) return;
+
+    if (uploadedImages.length > 0) {
+        gridContainer.style.display = 'block';
+        dragDropZone.style.display = uploadedImages.length >= 10 ? 'none' : 'block';
+    } else {
+        gridContainer.style.display = 'none';
+        dragDropZone.style.display = 'block';
+    }
+
+    if (countEl) countEl.textContent = uploadedImages.length;
+
+    grid.innerHTML = uploadedImages.map(function(url, index) {
+        return '<div class="img-thumb-item" style="position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1;background:#f0f0f0;">' +
+            (index === 0 ? '<span style="position:absolute;top:4px;left:4px;background:#667eea;color:white;font-size:10px;padding:2px 6px;border-radius:4px;z-index:2;">Utama</span>' : '') +
+            '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='https://via.placeholder.com/100x100?text=Error'">' +
+            '<div style="position:absolute;top:4px;right:4px;display:flex;gap:3px;">' +
+                (index > 0 ? '<button type="button" onclick="moveImageLeft(' + index + ')" style="width:22px;height:22px;background:rgba(0,0,0,0.6);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;" title="Geser kiri">◀</button>' : '') +
+                (index < uploadedImages.length - 1 ? '<button type="button" onclick="moveImageRight(' + index + ')" style="width:22px;height:22px;background:rgba(0,0,0,0.6);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;" title="Geser kanan">▶</button>' : '') +
+                '<button type="button" onclick="removeImage(' + index + ')" style="width:22px;height:22px;background:rgba(220,53,69,0.9);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;" title="Hapus">✕</button>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
+
+function moveImageLeft(index) {
+    if (index <= 0) return;
+    var temp = uploadedImages[index - 1];
+    uploadedImages[index - 1] = uploadedImages[index];
+    uploadedImages[index] = temp;
+    renderImagesGrid();
+    syncImagesInput();
+}
+
+function moveImageRight(index) {
+    if (index >= uploadedImages.length - 1) return;
+    var temp = uploadedImages[index + 1];
+    uploadedImages[index + 1] = uploadedImages[index];
+    uploadedImages[index] = temp;
+    renderImagesGrid();
+    syncImagesInput();
+}
+
+function removeImage(index) {
+    uploadedImages.splice(index, 1);
+    renderImagesGrid();
+    syncImagesInput();
+}
+
+function syncImagesInput() {
+    var imagesInput = document.getElementById('product-images');
+    var imageInput = document.getElementById('product-image');
+    if (imagesInput) imagesInput.value = JSON.stringify(uploadedImages);
+    if (imageInput) imageInput.value = uploadedImages.length > 0 ? uploadedImages[0] : '';
+}
+
+function resetImagesUpload() {
+    uploadedImages = [];
+    renderImagesGrid();
+    syncImagesInput();
+    var fileInput = document.getElementById('product-image-file');
+    if (fileInput) fileInput.value = '';
 }
 
 // ========================
@@ -511,7 +595,14 @@ async function handleProductSubmit(e) {
     if (platforms.length === 0) { alert('Pilih minimal satu platform affiliate'); return; }
 
     var name = document.getElementById('product-name').value.trim() || ('Produk ' + new Date().toLocaleDateString('id-ID'));
-    var image = document.getElementById('product-image').value.trim() || 'https://via.placeholder.com/280x280?text=Produk';
+    var imagesRaw = document.getElementById('product-images').value;
+    var imagesArray = [];
+    try { imagesArray = JSON.parse(imagesRaw); } catch(e) { imagesArray = []; }
+    if (imagesArray.length === 0) {
+        var singleImg = document.getElementById('product-image').value.trim();
+        if (singleImg) imagesArray = [singleImg];
+    }
+    var image = imagesArray.length > 0 ? imagesArray[0] : 'https://via.placeholder.com/280x280?text=Produk';
     var originalprice = parseInt(originalPriceInput);
     var price = enableDiscount && discountPriceInput ? parseInt(discountPriceInput) : originalprice;
     var discount = enableDiscount && discountPriceInput
@@ -534,6 +625,7 @@ async function handleProductSubmit(e) {
                 .update({
                     name: name,
                     image: image,
+                    images: imagesArray,
                     category: category,
                     originalprice: originalprice,
                     price: price,
@@ -553,6 +645,7 @@ async function handleProductSubmit(e) {
                     id: Date.now().toString(),
                     name: name,
                     image: image,
+                    images: imagesArray,
                     category: category,
                     originalprice: originalprice,
                     price: price,
