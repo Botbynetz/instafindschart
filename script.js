@@ -138,10 +138,58 @@ function renderProducts(products) {
                 '<button class="btn-buy" onclick="trackAndRedirect(\'' + affLink + '\', \'' + product.id + '\')">' +
                     '🛒 Beli Sekarang' +
                 '</button>' +
+                '<button class="btn-share" onclick="shareProduct(\'' + encodeURIComponent(product.name) + '\', \'' + affLink + '\')">' +
+                    '🔗 Bagikan Produk' +
+                '</button>' +
             '</div>';
 
         productsGrid.appendChild(productCard);
     });
+}
+
+// ========================
+// SHARE PRODUCT
+// ========================
+function shareProduct(encodedName, link) {
+    var name = decodeURIComponent(encodedName);
+    var shareText = '🛍️ Cek produk ini: ' + name + '\n\n🔗 ' + link + '\n\nTemukan produk pilihan di Instafinds.id!';
+
+    // Pakai Web Share API kalau tersedia (HP)
+    if (navigator.share) {
+        navigator.share({
+            title: name,
+            text: '🛍️ Cek produk ini di Instafinds.id!',
+            url: link
+        }).catch(function(err) {
+            console.log('Share cancelled:', err);
+        });
+    } else {
+        // Fallback: copy ke clipboard
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(shareText).then(function() {
+                showNotification('✅ Link produk berhasil disalin!');
+            }).catch(function() {
+                fallbackCopy(shareText);
+            });
+        } else {
+            fallbackCopy(shareText);
+        }
+    }
+}
+
+function fallbackCopy(text) {
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.cssText = 'position:fixed;opacity:0;';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+        document.execCommand('copy');
+        showNotification('✅ Link produk berhasil disalin!');
+    } catch(e) {
+        showNotification('❌ Gagal menyalin link.');
+    }
+    document.body.removeChild(textarea);
 }
 
 // ========================
