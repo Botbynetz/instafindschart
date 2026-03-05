@@ -933,3 +933,67 @@ body {
     width: 18px;
     border-radius: 4px;
 }
+
+/* ======================== CATEGORY FILTER ======================== */
+.category-filter-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 0 0 20px 0;
+    padding: 4px 0;
+}
+
+.filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 30px;
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    background: white;
+    color: #667eea;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+}
+
+.filter-btn:hover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.08);
+    transform: translateY(-1px);
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+}
+
+.filter-count {
+    background: rgba(255,255,255,0.25);
+    color: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 20px;
+    min-width: 20px;
+    text-align: center;
+}
+
+.filter-btn:not(.active) .filter-count {
+    background: rgba(102, 126, 234, 0.12);
+    color: #667eea;
+}
+
+@media (max-width: 480px) {
+    .category-filter-bar {
+        gap: 6px;
+    }
+    .filter-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+}
