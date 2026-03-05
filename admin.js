@@ -153,22 +153,39 @@ function setupEventListeners() {
 // ========================
 // NAVIGATION
 // ========================
+var PAGE_TITLES = {
+    dashboard: 'Dashboard',
+    products: 'Kelola Produk',
+    categories: 'Kategori',
+    events: 'Event',
+    settings: 'Setelan'
+};
+
 function navigateToPage(pageName) {
+    // Sembunyikan semua page
     document.querySelectorAll('.page').forEach(function(page) {
+        page.style.display = 'none';
         page.classList.remove('active');
     });
 
+    // Tampilkan page yang dipilih
     var pageElement = document.getElementById(pageName + '-page');
-    if (pageElement) pageElement.classList.add('active');
+    if (pageElement) {
+        pageElement.style.display = 'block';
+        pageElement.classList.add('active');
+    }
 
+    // Update nav active state
     document.querySelectorAll('.nav-item').forEach(function(link) {
         link.classList.remove('active');
         if (link.dataset.page === pageName) link.classList.add('active');
     });
 
-    document.querySelector('.page-title').textContent =
-        pageName.charAt(0).toUpperCase() + pageName.slice(1);
+    // Update page title
+    var titleEl = document.querySelector('.page-title');
+    if (titleEl) titleEl.textContent = PAGE_TITLES[pageName] || pageName;
 
+    // Load data per page
     if (pageName === 'dashboard') renderDashboard();
     else if (pageName === 'products') renderProducts();
     else if (pageName === 'categories') renderCategories();
