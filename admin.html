@@ -195,8 +195,19 @@
                             <textarea id="event-description" placeholder="Deskripsi singkat..." rows="2" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></textarea>
                         </div>
                         <div class="form-group">
-                            <label>URL Gambar</label>
-                            <input type="url" id="event-image" placeholder="https://...">
+                            <label>Gambar Banner</label>
+                            <!-- Upload atau URL -->
+                            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+                                <button type="button" onclick="document.getElementById('event-img-file').click()" style="padding:7px 14px;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap;">
+                                    <i class="fas fa-upload"></i> Upload Foto
+                                </button>
+                                <span id="event-img-status" style="font-size:12px;color:#888;">atau masukkan URL di bawah</span>
+                            </div>
+                            <input type="file" id="event-img-file" accept="image/*" style="display:none;" onchange="uploadEventImage(this)">
+                            <input type="url" id="event-image" placeholder="https://... (URL gambar banner)">
+                            <div id="event-img-preview" style="display:none;margin-top:8px;">
+                                <img id="event-img-preview-img" src="" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;">
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>Link Tujuan *</label>
