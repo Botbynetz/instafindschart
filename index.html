@@ -17,6 +17,37 @@
 </style>
 </head>
 <body>
+
+    <!-- Floating Search Bar -->
+    <div class="floating-search" id="floating-search">
+        <div class="floating-search-inner">
+            <i class="fas fa-search"></i>
+            <input type="text" id="productSearch" placeholder="Cari produk di Instafinds.id...">
+            <button class="floating-search-clear" id="search-clear" onclick="clearSearch()" style="display:none;">
+                <i class="fas fa-times"></i>
+            </button>
+            <!-- Filter Dropdown -->
+            <div class="search-filter-wrap">
+                <button class="search-filter-btn" id="search-filter-btn" onclick="toggleFilterDropdown()">
+                    <i class="fas fa-sliders-h"></i>
+                    <span id="filter-label">Filter</span>
+                    <i class="fas fa-chevron-down" id="filter-chevron"></i>
+                </button>
+                <div class="search-filter-dropdown" id="search-filter-dropdown">
+                    <div class="filter-section-title">Urutkan</div>
+                    <button class="filter-option active" data-filter="default" onclick="applyFilter('default')"><i class="fas fa-th"></i> Semua</button>
+                    <button class="filter-option" data-filter="popular" onclick="applyFilter('popular')"><i class="fas fa-fire"></i> Terpopuler</button>
+                    <button class="filter-option" data-filter="newest" onclick="applyFilter('newest')"><i class="fas fa-clock"></i> Terbaru</button>
+                    <button class="filter-option" data-filter="oldest" onclick="applyFilter('oldest')"><i class="fas fa-history"></i> Terlama</button>
+                    <div class="filter-section-title" style="margin-top:10px;">Kategori</div>
+                    <div id="filter-category-list">
+                        <!-- Diisi otomatis dari JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Container -->
     <div class="linktree-container">
         <!-- Profile Section -->
@@ -64,12 +95,6 @@
                 <button class="banner-nav banner-prev" id="banner-prev"><i class="fas fa-chevron-left"></i></button>
                 <button class="banner-nav banner-next" id="banner-next"><i class="fas fa-chevron-right"></i></button>
                 <div class="banner-dots" id="banner-dots"></div>
-            </div>
-
-            <!-- Search Bar -->
-            <div class="search-bar-simple">
-                <i class="fas fa-search"></i>
-                <input type="text" id="productSearch" placeholder="Cari produk...">
             </div>
 
             <!-- Filter Pills -->
