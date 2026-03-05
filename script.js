@@ -451,89 +451,126 @@ function buildCategoryGrid(products) {
 }
 
 // ========================
-// HIGHLIGHT CARDS
+// HIGHLIGHT SLIDESHOW
 // ========================
+var hlCurrent = 0;
+var hlAuto;
+var hlSlides = [];
+
 async function loadHighlightCards(products) {
-    // 1. TERPOPULER — produk dengan clicks terbanyak
-    if (products.length > 0) {
-        var popular = products.slice().sort(function(a, b) {
-            return (b.clicks || 0) - (a.clicks || 0);
-        })[0];
+    hlSlides = [];
 
+    // Slide 1: Terpopuler
+    if (products.length > 0) {
+        var popular = products.slice().sort(function(a,b){ return (b.clicks||0)-(a.clicks||0); })[0];
         if (popular) {
-            var cardPopular = document.getElementById('card-popular');
-            var popularImg = document.getElementById('popular-img');
-            var popularName = document.getElementById('popular-name');
-            var popularClicks = document.getElementById('popular-clicks');
-            var popularBtn = document.getElementById('popular-btn');
-
-            if (popularImg) popularImg.src = popular.image || '';
-            if (popularName) popularName.textContent = popular.name || '';
-            var clkCount = popular.clicks || 0;
-            if (popularClicks) popularClicks.textContent = clkCount > 0 ? ('👆 ' + clkCount + ' klik') : '🆕 Produk unggulan';
-            if (popularBtn) popularBtn.onclick = function() { trackAndRedirect(popular.affiliatelink, popular.id); };
-            if (cardPopular) cardPopular.style.display = 'flex';
+            hlSlides.push({
+                badge: '🔥 Terpopuler',
+                badgeColor: '#ff6b35',
+                image: popular.image || '',
+                title: popular.name,
+                sub: (popular.clicks||0) > 0 ? '👆 '+(popular.clicks||0)+' klik' : '⭐ Produk Unggulan',
+                btnText: 'Lihat Produk',
+                btnColor: '#ff6b35',
+                action: function(p){ return function(){ trackAndRedirect(p.affiliatelink, p.id); }; }(popular)
+            });
         }
     }
 
-    // 2. PRODUK TERBARU — produk paling baru ditambahkan
+    // Slide 2: Produk Terbaru
     if (products.length > 0) {
-        var newest = products.slice().sort(function(a, b) {
-            return new Date(b.createdat || 0) - new Date(a.createdat || 0);
-        })[0];
-
+        var newest = products.slice().sort(function(a,b){ return new Date(b.createdat||0)-new Date(a.createdat||0); })[0];
         if (newest) {
-            var cardNew = document.getElementById('card-new');
-            var newImg = document.getElementById('new-img');
-            var newName = document.getElementById('new-name');
-            var newDate = document.getElementById('new-date');
-            var newBtn = document.getElementById('new-btn');
-
-            var tgl = newest.createdat ? new Date(newest.createdat).toLocaleDateString('id-ID', {
-                day: 'numeric', month: 'long', year: 'numeric'
-            }) : '';
-
-            if (newImg) newImg.src = newest.image || '';
-            if (newName) newName.textContent = newest.name || '';
-            if (newDate) newDate.textContent = '📆 Ditambahkan ' + tgl;
-            if (newBtn) newBtn.onclick = function() { trackAndRedirect(newest.affiliatelink, newest.id); };
-            if (cardNew) cardNew.style.display = 'flex';
+            var tgl = newest.createdat ? new Date(newest.createdat).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}) : '';
+            hlSlides.push({
+                badge: '🆕 Produk Baru',
+                badgeColor: '#11998e',
+                image: newest.image || '',
+                title: newest.name,
+                sub: '📆 Ditambahkan '+tgl,
+                btnText: 'Lihat Produk',
+                btnColor: '#11998e',
+                action: function(p){ return function(){ trackAndRedirect(p.affiliatelink, p.id); }; }(newest)
+            });
         }
     }
 
-    // 3. EVENT — load dari Supabase table 'events'
+    // Slide 3+: Events aktif
     try {
         if (window.supabase) {
-            var result = await window.supabase
-                .from('events')
-                .select('*')
-                .eq('active', true)
-                .order('createdat', { ascending: false })
-                .limit(1);
-
-            if (result.data && result.data.length > 0) {
-                var ev = result.data[0];
-                var cardEvent = document.getElementById('card-event');
-                var eventImg = document.getElementById('event-img');
-                var eventLabel = document.getElementById('event-label');
-                var eventName = document.getElementById('event-name');
-                var eventDesc = document.getElementById('event-desc');
-                var eventBtn = document.getElementById('event-btn');
-
-                if (eventImg) eventImg.src = ev.image || '';
-                if (eventLabel) eventLabel.textContent = ev.label || 'Event Spesial';
-                if (eventName) eventName.textContent = ev.title || '';
-                if (eventDesc) eventDesc.textContent = ev.description || '';
-                if (eventBtn) {
-                    eventBtn.textContent = ev.buttontext || 'Lihat Sekarang';
-                    eventBtn.onclick = function() { window.open(ev.link || '#', '_blank'); };
-                }
-                if (cardEvent) cardEvent.style.display = 'flex';
+            var evResult = await window.supabase.from('events').select('*').eq('active',true).order('createdat',{ascending:false});
+            if (evResult.data) {
+                evResult.data.forEach(function(ev) {
+                    hlSlides.push({
+                        badge: ev.label || '📅 Event',
+                        badgeColor: '#667eea',
+                        image: ev.image || '',
+                        title: ev.title,
+                        sub: ev.description || '',
+                        btnText: ev.buttontext || 'Lihat Sekarang',
+                        btnColor: '#667eea',
+                        action: function(link){ return function(){ window.open(link,'_blank'); }; }(ev.link||'#')
+                    });
+                });
             }
         }
-    } catch(e) {
-        console.log('Event not loaded:', e);
+    } catch(e) {}
+
+    renderHighlightSlideshow();
+}
+
+function renderHighlightSlideshow() {
+    var show = document.getElementById('highlight-slideshow');
+    var track = document.getElementById('highlight-track');
+    var dots = document.getElementById('highlight-dots');
+    if (!show || !track || hlSlides.length === 0) { if(show) show.style.display='none'; return; }
+
+    show.style.display = 'block';
+
+    track.innerHTML = hlSlides.map(function(s, i) {
+        return '<div class="hl-slide">' +
+            '<div class="hl-slide-img" style="background-image:url('+s.image+');">' +
+                '<div class="hl-slide-overlay"></div>' +
+                '<span class="hl-slide-badge" style="background:'+s.badgeColor+'">'+s.badge+'</span>' +
+            '</div>' +
+            '<div class="hl-slide-info">' +
+                '<div class="hl-slide-title">'+s.title+'</div>' +
+                '<div class="hl-slide-sub">'+s.sub+'</div>' +
+                '<button class="hl-slide-btn" style="background:'+s.btnColor+'" data-idx="'+i+'">'+s.btnText+'</button>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+
+    // Bind button actions
+    track.querySelectorAll('.hl-slide-btn').forEach(function(btn) {
+        var idx = parseInt(btn.dataset.idx);
+        btn.addEventListener('click', hlSlides[idx].action);
+    });
+
+    // Dots
+    dots.innerHTML = hlSlides.map(function(_, i) {
+        return '<button class="hl-dot'+(i===0?' active':'')+'" data-i="'+i+'"></button>';
+    }).join('');
+    dots.querySelectorAll('.hl-dot').forEach(function(d) {
+        d.addEventListener('click', function(){ goHlSlide(parseInt(d.dataset.i)); });
+    });
+
+    goHlSlide(0);
+
+    // Auto slide
+    clearInterval(hlAuto);
+    if (hlSlides.length > 1) {
+        hlAuto = setInterval(function(){ goHlSlide(hlCurrent+1); }, 4500);
+        show.onmouseenter = function(){ clearInterval(hlAuto); };
+        show.onmouseleave = function(){ hlAuto = setInterval(function(){ goHlSlide(hlCurrent+1); }, 4500); };
     }
+}
+
+function goHlSlide(n) {
+    hlCurrent = ((n % hlSlides.length) + hlSlides.length) % hlSlides.length;
+    var track = document.getElementById('highlight-track');
+    if (track) track.style.transform = 'translateX(-'+(hlCurrent*100)+'%)';
+    document.querySelectorAll('.hl-dot').forEach(function(d,i){ d.classList.toggle('active', i===hlCurrent); });
 }
 
 // ========================
