@@ -118,6 +118,9 @@ function renderProducts(products) {
     // Build filter kategori dari produk yang ada
     buildCategoryFilters(products);
 
+    // Load highlight cards
+    loadHighlightCards(products);
+
     products.forEach(function(product, index) {
         var productCard = document.createElement('div');
         productCard.className = 'product-card';
@@ -278,6 +281,91 @@ async function trackAndRedirect(link, productId) {
         console.error('❌ Error tracking click:', err);
     }
     return false;
+}
+
+// ========================
+// HIGHLIGHT CARDS
+// ========================
+async function loadHighlightCards(products) {
+    // 1. TERPOPULER — produk dengan clicks terbanyak
+    if (products.length > 0) {
+        var popular = products.slice().sort(function(a, b) {
+            return (b.clicks || 0) - (a.clicks || 0);
+        })[0];
+
+        if (popular && (popular.clicks || 0) > 0) {
+            var cardPopular = document.getElementById('card-popular');
+            var popularImg = document.getElementById('popular-img');
+            var popularName = document.getElementById('popular-name');
+            var popularClicks = document.getElementById('popular-clicks');
+            var popularBtn = document.getElementById('popular-btn');
+
+            if (popularImg) popularImg.src = popular.image || '';
+            if (popularName) popularName.textContent = popular.name || '';
+            if (popularClicks) popularClicks.textContent = '👆 ' + (popular.clicks || 0) + ' klik';
+            if (popularBtn) popularBtn.onclick = function() { trackAndRedirect(popular.affiliatelink, popular.id); };
+            if (cardPopular) cardPopular.style.display = 'flex';
+        }
+    }
+
+    // 2. PRODUK TERBARU — produk paling baru ditambahkan
+    if (products.length > 0) {
+        var newest = products.slice().sort(function(a, b) {
+            return new Date(b.createdat || 0) - new Date(a.createdat || 0);
+        })[0];
+
+        if (newest) {
+            var cardNew = document.getElementById('card-new');
+            var newImg = document.getElementById('new-img');
+            var newName = document.getElementById('new-name');
+            var newDate = document.getElementById('new-date');
+            var newBtn = document.getElementById('new-btn');
+
+            var tgl = newest.createdat ? new Date(newest.createdat).toLocaleDateString('id-ID', {
+                day: 'numeric', month: 'long', year: 'numeric'
+            }) : '';
+
+            if (newImg) newImg.src = newest.image || '';
+            if (newName) newName.textContent = newest.name || '';
+            if (newDate) newDate.textContent = '📆 Ditambahkan ' + tgl;
+            if (newBtn) newBtn.onclick = function() { trackAndRedirect(newest.affiliatelink, newest.id); };
+            if (cardNew) cardNew.style.display = 'flex';
+        }
+    }
+
+    // 3. EVENT — load dari Supabase table 'events'
+    try {
+        if (window.supabase) {
+            var result = await window.supabase
+                .from('events')
+                .select('*')
+                .eq('active', true)
+                .order('createdat', { ascending: false })
+                .limit(1);
+
+            if (result.data && result.data.length > 0) {
+                var ev = result.data[0];
+                var cardEvent = document.getElementById('card-event');
+                var eventImg = document.getElementById('event-img');
+                var eventLabel = document.getElementById('event-label');
+                var eventName = document.getElementById('event-name');
+                var eventDesc = document.getElementById('event-desc');
+                var eventBtn = document.getElementById('event-btn');
+
+                if (eventImg) eventImg.src = ev.image || '';
+                if (eventLabel) eventLabel.textContent = ev.label || 'Event Spesial';
+                if (eventName) eventName.textContent = ev.title || '';
+                if (eventDesc) eventDesc.textContent = ev.description || '';
+                if (eventBtn) {
+                    eventBtn.textContent = ev.buttontext || 'Lihat Sekarang';
+                    eventBtn.onclick = function() { window.open(ev.link || '#', '_blank'); };
+                }
+                if (cardEvent) cardEvent.style.display = 'flex';
+            }
+        }
+    } catch(e) {
+        console.log('Event not loaded:', e);
+    }
 }
 
 // ========================
