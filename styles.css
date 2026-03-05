@@ -1692,3 +1692,129 @@ body {
     z-index: 10;
     cursor: default;
 }
+
+
+/* ======================== LIGHTBOX ======================== */
+#lightbox-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+
+.lb-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    backdrop-filter: blur(8px);
+}
+
+.lb-container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 92vw;
+    max-height: 92vh;
+}
+
+.lb-img-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: min(90vw, 600px);
+    max-height: 75vh;
+}
+
+#lb-img {
+    max-width: 100%;
+    max-height: 75vh;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    transition: opacity 0.2s ease;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.lb-close {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(4px);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    z-index: 2;
+}
+.lb-close:hover { background: rgba(255,255,255,0.3); }
+
+.lb-nav {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(4px);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    z-index: 2;
+}
+.lb-nav:hover { background: rgba(255,255,255,0.3); }
+.lb-prev { left: 12px; }
+.lb-next { right: 12px; }
+
+.lb-dots {
+    display: flex;
+    gap: 6px;
+    margin-top: 14px;
+    justify-content: center;
+}
+
+.lb-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.35);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.lb-dot.active {
+    background: white;
+    width: 20px;
+    border-radius: 4px;
+}
+
+.lb-counter {
+    margin-top: 8px;
+    color: rgba(255,255,255,0.6);
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+/* Cursor pointer on product images */
+.product-image {
+    cursor: zoom-in;
+}
