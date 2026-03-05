@@ -318,7 +318,9 @@ function editProduct(productId) {
 // MULTI IMAGE UPLOAD
 // ========================
 var uploadedImages = []; // array of URLs
-var IMGBB_KEY = 'cc40cdc3967a9e03f1a0a190479f5f21';
+var IMGBB_KEY = 'cc40cdc3967a9e03f1a0a190479f5f21'; // backup
+var CLOUDINARY_CLOUD_NAME = 'dxxx4ttys';
+var CLOUDINARY_UPLOAD_PRESET = 'instafinds';
 
 // ========================
 // TELEGRAM CONFIG
@@ -394,21 +396,26 @@ async function handleImageFiles(files) {
     }
 }
 
-async function uploadToImgbb(file) {
+async function uploadToCloudinary(file) {
     var formData = new FormData();
-    formData.append('image', file);
-    formData.append('key', IMGBB_KEY);
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-    var response = await fetch('https://api.imgbb.com/1/upload', {
+    var response = await fetch('https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD_NAME + '/image/upload', {
         method: 'POST',
         body: formData
     });
     var result = await response.json();
-    if (result.success) {
-        // Pakai display_url yang lebih stabil, fallback ke url
-        return result.data.display_url || result.data.url;
+    if (result.secure_url) {
+        console.log('✅ Cloudinary URL:', result.secure_url);
+        return result.secure_url;
     }
-    throw new Error(result.error ? result.error.message : 'Upload gagal');
+    throw new Error(result.error ? result.error.message : 'Upload Cloudinary gagal');
+}
+
+// Keep for backward compat
+async function uploadToImgbb(file) {
+    return uploadToCloudinary(file);
 }
 
 function addImageFromUrl() {
@@ -614,29 +621,23 @@ async function fetchFromAffiliateLink(e) {
     }
 }
 
-// Mirror gambar dari URL eksternal ke Imgbb
+// Mirror gambar dari URL eksternal ke Cloudinary
 async function mirrorImageToImgbb(imageUrl) {
-    // Pakai allorigins untuk fetch gambar sebagai base64
-    var proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(imageUrl);
-    var response = await fetch(proxyUrl);
-    if (!response.ok) throw new Error('Gagal fetch gambar');
-
-    var blob = await response.blob();
-
-    // Upload blob ke Imgbb
+    // Upload URL langsung ke Cloudinary (tidak perlu fetch dulu)
     var formData = new FormData();
-    formData.append('image', blob, 'product.jpg');
-    formData.append('key', IMGBB_KEY);
+    formData.append('file', imageUrl);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-    var uploadResp = await fetch('https://api.imgbb.com/1/upload', {
+    var response = await fetch('https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD_NAME + '/image/upload', {
         method: 'POST',
         body: formData
     });
-    var result = await uploadResp.json();
-    if (result.success) {
-        return result.data.display_url || result.data.url;
+    var result = await response.json();
+    if (result.secure_url) {
+        console.log('✅ Cloudinary mirror URL:', result.secure_url);
+        return result.secure_url;
     }
-    throw new Error(result.error ? result.error.message : 'Upload Imgbb gagal');
+    throw new Error(result.error ? result.error.message : 'Upload Cloudinary gagal');
 }
 
 function autoDetectPlatform(url) {
