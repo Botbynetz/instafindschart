@@ -118,6 +118,9 @@ function renderProducts(products) {
     // Build filter kategori dari produk yang ada
     buildCategoryFilters(products);
 
+    // Build filter dropdown category list
+    buildFilterCategoryList(products);
+
     // Banner slider (events + produk terpopuler)
     initBannerSlider(products);
 
@@ -127,6 +130,7 @@ function renderProducts(products) {
     products.forEach(function(product, index) {
         var productCard = document.createElement('div');
         productCard.className = 'product-card';
+        productCard.dataset.id = product.id || '';
         productCard.dataset.category = String(product.category || '');
         productCard.style.animation = 'fadeInUp 0.6s ease backwards';
         productCard.style.animationDelay = (index * 0.05) + 's';
@@ -594,6 +598,196 @@ function filterByCategory(categoryId) {
         noMsg.remove();
     }
 }
+
+// ========================
+// FILTER DROPDOWN
+// ========================
+var activeFilter = 'default';
+var activeFilterCategory = 'all';
+
+function toggleFilterDropdown() {
+    var dd = document.getElementById('search-filter-dropdown');
+    var chevron = document.getElementById('filter-chevron');
+    var btn = document.getElementById('search-filter-btn');
+    if (!dd) return;
+    var isOpen = dd.classList.contains('open');
+    dd.classList.toggle('open', !isOpen);
+    if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+    if (btn) btn.classList.toggle('active', !isOpen);
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    var wrap = document.querySelector('.search-filter-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+        var dd = document.getElementById('search-filter-dropdown');
+        var chevron = document.getElementById('filter-chevron');
+        var btn = document.getElementById('search-filter-btn');
+        if (dd) dd.classList.remove('open');
+        if (chevron) chevron.style.transform = '';
+        if (btn) btn.classList.remove('active');
+    }
+});
+
+function applyFilter(filterType) {
+    activeFilter = filterType;
+
+    // Update active button
+    document.querySelectorAll('.filter-option[data-filter]').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.filter === filterType);
+    });
+
+    // Update label
+    var labels = { default: 'Filter', popular: '🔥 Populer', newest: '🆕 Terbaru', oldest: '🕰️ Terlama' };
+    var labelEl = document.getElementById('filter-label');
+    if (labelEl) labelEl.textContent = labels[filterType] || 'Filter';
+
+    applyAllFilters();
+
+    // Close dropdown after selecting
+    var dd = document.getElementById('search-filter-dropdown');
+    var chevron = document.getElementById('filter-chevron');
+    var btn = document.getElementById('search-filter-btn');
+    if (dd) dd.classList.remove('open');
+    if (chevron) chevron.style.transform = '';
+    if (btn) btn.classList.remove('active');
+}
+
+function applyFilterCategory(catKey, catName) {
+    activeFilterCategory = catKey;
+
+    // Update active category btn
+    document.querySelectorAll('.filter-option[data-cat]').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.cat === catKey);
+    });
+
+    // Update label if category selected
+    var labelEl = document.getElementById('filter-label');
+    if (labelEl && catKey !== 'all') labelEl.textContent = '📂 ' + catName;
+    else if (labelEl && activeFilter === 'default') labelEl.textContent = 'Filter';
+
+    applyAllFilters();
+
+    // Close dropdown
+    var dd = document.getElementById('search-filter-dropdown');
+    var chevron = document.getElementById('filter-chevron');
+    var filterBtn = document.getElementById('search-filter-btn');
+    if (dd) dd.classList.remove('open');
+    if (chevron) chevron.style.transform = '';
+    if (filterBtn) filterBtn.classList.remove('active');
+}
+
+function applyAllFilters() {
+    var searchVal = (document.getElementById('productSearch').value || '').toLowerCase().trim();
+    var productsGrid = document.querySelector('.products-grid');
+    if (!productsGrid) return;
+
+    // Sort allProducts based on activeFilter
+    var sorted = allProducts.slice();
+    if (activeFilter === 'popular') {
+        sorted.sort(function(a,b){ return (b.clicks||0) - (a.clicks||0); });
+    } else if (activeFilter === 'newest') {
+        sorted.sort(function(a,b){ return new Date(b.createdat||0) - new Date(a.createdat||0); });
+    } else if (activeFilter === 'oldest') {
+        sorted.sort(function(a,b){ return new Date(a.createdat||0) - new Date(b.createdat||0); });
+    }
+
+    // Reorder cards in DOM
+    var cards = productsGrid.querySelectorAll('.product-card');
+    var cardMap = {};
+    cards.forEach(function(card) { cardMap[card.dataset.id] = card; });
+
+    sorted.forEach(function(p) {
+        var card = cardMap[p.id];
+        if (card) productsGrid.appendChild(card);
+    });
+
+    // Apply visibility: search + category
+    var visible = 0;
+    productsGrid.querySelectorAll('.product-card').forEach(function(card) {
+        var name = (card.querySelector('.product-name') ? card.querySelector('.product-name').textContent : '').toLowerCase();
+        var cat = String(card.dataset.category || '').toLowerCase().trim();
+        var matchSearch = !searchVal || name.includes(searchVal);
+        var matchCat = activeFilterCategory === 'all' || cat === activeFilterCategory;
+        card.style.display = (matchSearch && matchCat) ? '' : 'none';
+        if (matchSearch && matchCat) visible++;
+    });
+
+    // Empty message
+    var noMsg = productsGrid.querySelector('.no-filter-message');
+    if (visible === 0) {
+        if (!noMsg) {
+            noMsg = document.createElement('div');
+            noMsg.className = 'no-filter-message';
+            noMsg.style.cssText = 'grid-column:1/-1;text-align:center;padding:50px;color:#999;font-size:16px;';
+            productsGrid.appendChild(noMsg);
+        }
+        noMsg.textContent = 'Tidak ada produk yang cocok.';
+    } else if (noMsg) {
+        noMsg.remove();
+    }
+}
+
+function buildFilterCategoryList(products) {
+    var list = document.getElementById('filter-category-list');
+    if (!list) return;
+
+    var catMap = {};
+    products.forEach(function(p) {
+        var key = String(p.category || '').toLowerCase().trim();
+        if (!key) return;
+        if (!catMap[key]) catMap[key] = { name: p.category, count: 0, key: key };
+        catMap[key].count++;
+    });
+
+    var cats = Object.values(catMap);
+    list.innerHTML = '<button class="filter-option active" data-cat="all" onclick="applyFilterCategory(&quot;all&quot;,&quot;Semua&quot;)"><i class="fas fa-th"></i> Semua Kategori</button>' +
+        cats.map(function(cat) {
+            return '<button class="filter-option" data-cat="' + cat.key + '" onclick="applyFilterCategory(this.dataset.cat, this.textContent)">' +
+                '<i class="fas fa-tag"></i> ' + cat.name + ' <span class="filter-opt-count">' + cat.count + '</span>' +
+            '</button>';
+        }).join('');
+}
+
+// ========================
+// FLOATING SEARCH BEHAVIOR
+// ========================
+(function() {
+    var lastScroll = 0;
+    window.addEventListener('scroll', function() {
+        var current = window.scrollY;
+        var bar = document.getElementById('floating-search');
+        if (!bar) return;
+        // Hide on scroll down (past 80px), show on scroll up
+        if (current > 80 && current > lastScroll) {
+            bar.classList.add('hidden');
+        } else {
+            bar.classList.remove('hidden');
+        }
+        lastScroll = current;
+    }, { passive: true });
+})();
+
+// ========================
+// SEARCH
+// ========================
+function clearSearch() {
+    var input = document.getElementById('productSearch');
+    var clearBtn = document.getElementById('search-clear');
+    if (input) { input.value = ''; input.dispatchEvent(new Event('input')); input.focus(); }
+    if (clearBtn) clearBtn.style.display = 'none';
+}
+
+// Show/hide clear button as user types
+document.addEventListener('DOMContentLoaded', function() {
+    var input = document.getElementById('productSearch');
+    var clearBtn = document.getElementById('search-clear');
+    if (input && clearBtn) {
+        input.addEventListener('input', function() {
+            clearBtn.style.display = input.value ? 'flex' : 'none';
+        });
+    }
+});
 
 // ========================
 // SEARCH
