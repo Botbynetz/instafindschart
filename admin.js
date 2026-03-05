@@ -1107,9 +1107,11 @@ function openEventModal(id) {
     document.getElementById('event-buttontext').value = 'Lihat Sekarang';
     document.getElementById('event-active').checked = true;
     var preview = document.getElementById('event-img-preview');
-    var status = document.getElementById('event-img-status');
+    var placeholder = document.getElementById('event-upload-placeholder');
+    var dropZone = document.getElementById('event-drop-zone');
     if (preview) preview.style.display = 'none';
-    if (status) status.textContent = 'atau masukkan URL di bawah';
+    if (placeholder) placeholder.style.display = 'block';
+    if (dropZone) dropZone.style.borderColor = '#ddd';
     openModal('event-modal');
 }
 
@@ -1136,35 +1138,41 @@ async function uploadEventImage(input) {
     var imageInput = document.getElementById('event-image');
     var preview = document.getElementById('event-img-preview');
     var previewImg = document.getElementById('event-img-preview-img');
+    var placeholder = document.getElementById('event-upload-placeholder');
+    var dropZone = document.getElementById('event-drop-zone');
 
     if (statusEl) statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengupload...';
+    if (dropZone) dropZone.style.borderColor = '#667eea';
 
     try {
         var url = await uploadToCloudinary(file);
         if (imageInput) imageInput.value = url;
         if (previewImg) previewImg.src = url;
         if (preview) preview.style.display = 'block';
-        if (statusEl) statusEl.textContent = '✅ Gambar berhasil diupload!';
+        if (placeholder) placeholder.style.display = 'none';
+        if (dropZone) dropZone.style.borderColor = '#4CAF50';
         showNotification('✅ Gambar banner berhasil diupload!', 'success');
     } catch(err) {
-        if (statusEl) statusEl.textContent = '❌ Gagal upload: ' + err.message;
+        if (statusEl) statusEl.textContent = '❌ Gagal upload, coba lagi';
+        if (dropZone) dropZone.style.borderColor = '#f44336';
         showNotification('❌ Gagal upload gambar: ' + err.message, 'error');
     }
 }
 
 async function saveEvent() {
     var title = document.getElementById('event-title').value.trim();
+    var image = document.getElementById('event-image').value.trim();
+    if (!title) { showNotification('⚠️ Judul event wajib diisi!', 'error'); return; }
+
     var link = document.getElementById('event-link').value.trim();
-    if (!title) { alert('Judul event wajib diisi!'); return; }
-    if (!link) { alert('Link tujuan wajib diisi!'); return; }
 
     var data = {
         title: title,
-        label: document.getElementById('event-label-input').value.trim() || 'Event Spesial',
-        description: document.getElementById('event-description').value.trim(),
-        image: document.getElementById('event-image').value.trim(),
-        link: link,
-        buttontext: document.getElementById('event-buttontext').value.trim() || 'Lihat Sekarang',
+        label: 'Event',
+        description: '',
+        image: image,
+        link: link || '',
+        buttontext: link ? 'Lihat Sekarang' : '',
         active: document.getElementById('event-active').checked
     };
 
