@@ -1098,20 +1098,25 @@ async function loadEvents() {
 
 function openEventModal(id) {
     editingEventId = null;
-    document.getElementById('event-modal-title').textContent = 'Tambah Event';
-    document.getElementById('event-title').value = '';
-    document.getElementById('event-label-input').value = 'Event Spesial';
-    document.getElementById('event-description').value = '';
-    document.getElementById('event-image').value = '';
-    document.getElementById('event-link').value = '';
-    document.getElementById('event-buttontext').value = 'Lihat Sekarang';
-    document.getElementById('event-active').checked = true;
+    var titleEl = document.getElementById('event-modal-title');
+    var titleInput = document.getElementById('event-title');
+    var imageInput = document.getElementById('event-image');
+    var linkInput = document.getElementById('event-link');
+    var activeInput = document.getElementById('event-active');
     var preview = document.getElementById('event-img-preview');
     var placeholder = document.getElementById('event-upload-placeholder');
     var dropZone = document.getElementById('event-drop-zone');
+    var statusEl = document.getElementById('event-img-status');
+
+    if (titleEl) titleEl.textContent = 'Tambah Event';
+    if (titleInput) titleInput.value = '';
+    if (imageInput) imageInput.value = '';
+    if (linkInput) linkInput.value = '';
+    if (activeInput) activeInput.checked = true;
     if (preview) preview.style.display = 'none';
     if (placeholder) placeholder.style.display = 'block';
     if (dropZone) dropZone.style.borderColor = '#ddd';
+    if (statusEl) statusEl.textContent = 'Klik untuk upload gambar banner';
     openModal('event-modal');
 }
 
@@ -1120,14 +1125,25 @@ async function editEvent(id) {
     if (result.error || !result.data) return;
     var ev = result.data;
     editingEventId = id;
-    document.getElementById('event-modal-title').textContent = 'Edit Event';
-    document.getElementById('event-title').value = ev.title || '';
-    document.getElementById('event-label-input').value = ev.label || 'Event Spesial';
-    document.getElementById('event-description').value = ev.description || '';
-    document.getElementById('event-image').value = ev.image || '';
-    document.getElementById('event-link').value = ev.link || '';
-    document.getElementById('event-buttontext').value = ev.buttontext || 'Lihat Sekarang';
-    document.getElementById('event-active').checked = ev.active !== false;
+    var titleEl = document.getElementById('event-modal-title');
+    var preview = document.getElementById('event-img-preview');
+    var previewImg = document.getElementById('event-img-preview-img');
+    var placeholder = document.getElementById('event-upload-placeholder');
+    var dropZone = document.getElementById('event-drop-zone');
+
+    if (titleEl) titleEl.textContent = 'Edit Event';
+    var t = document.getElementById('event-title'); if(t) t.value = ev.title || '';
+    var img = document.getElementById('event-image'); if(img) img.value = ev.image || '';
+    var lnk = document.getElementById('event-link'); if(lnk) lnk.value = ev.link || '';
+    var act = document.getElementById('event-active'); if(act) act.checked = ev.active !== false;
+
+    // Show preview if image exists
+    if (ev.image && previewImg && preview && placeholder) {
+        previewImg.src = ev.image;
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+        if (dropZone) dropZone.style.borderColor = '#4CAF50';
+    }
     openModal('event-modal');
 }
 
