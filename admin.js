@@ -404,7 +404,10 @@ async function uploadToImgbb(file) {
         body: formData
     });
     var result = await response.json();
-    if (result.success) return result.data.url;
+    if (result.success) {
+        // Pakai display_url yang lebih stabil, fallback ke url
+        return result.data.display_url || result.data.url;
+    }
     throw new Error(result.error ? result.error.message : 'Upload gagal');
 }
 
@@ -630,7 +633,9 @@ async function mirrorImageToImgbb(imageUrl) {
         body: formData
     });
     var result = await uploadResp.json();
-    if (result.success) return result.data.url;
+    if (result.success) {
+        return result.data.display_url || result.data.url;
+    }
     throw new Error(result.error ? result.error.message : 'Upload Imgbb gagal');
 }
 
