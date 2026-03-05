@@ -8,15 +8,23 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+    #profile-logo, .profile-avatar {
+        -webkit-user-select: none;
+        user-select: none;
+        pointer-events: none;
+    }
+</style>
 </head>
 <body>
     <!-- Main Container -->
     <div class="linktree-container">
         <!-- Profile Section -->
         <section class="profile-section">
-            <div class="profile-avatar">
-                <img src="logo.png" alt="Instafinds.id" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+            <div class="profile-avatar" id="profile-logo">
+                <!-- Logo via CSS background - harder to download -->
             </div>
+            <div class="logo-protect-overlay" oncontextmenu="return false;" ondragstart="return false;"></div>
             <h1 class="profile-name">Instafinds.id</h1>
             <p class="profile-bio">Kurator produk premium dari marketplace terpercaya 🛍️<br><small>Setiap produk dipilih dengan standar kualitas tinggi</small></p>
             
