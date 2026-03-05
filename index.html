@@ -42,7 +42,7 @@
             <div class="section-header">
                 <div class="section-title-container">
                     <h2>⭐ Koleksi Produk</h2>
-                    <button class="btn-add-product" onclick="openAdminModal()" title="Tambah/Kelola Produk (Admin)">
+                    <button class="btn-add-product" id="btn-manage-products" title="Tambah/Kelola Produk (Admin)">
                         <i class="fas fa-plus"></i> Kelola Produk
                     </button>
                 </div>
@@ -52,6 +52,14 @@
             <div class="search-bar-simple">
                 <i class="fas fa-search"></i>
                 <input type="text" id="productSearch" placeholder="Cari produk...">
+            </div>
+
+            <!-- Filter Kategori -->
+            <div class="category-filter-bar" id="category-filter-bar">
+                <button class="filter-btn active" data-category="all">
+                    <i class="fas fa-th"></i> Semua
+                </button>
+                <!-- Tombol kategori akan diisi otomatis dari JS -->
             </div>
 
             <!-- Products Grid -->
