@@ -798,16 +798,63 @@ function updateCategoryOptions() {
 // CATEGORIES
 // ========================
 function renderCategories() {
-    document.getElementById('categories-list').innerHTML = categories.map(function(cat) {
+    // Hitung produk per kategori
+    var countMap = {};
+    categories.forEach(function(cat) { countMap[cat.id] = 0; });
+    products.forEach(function(p) {
+        if (p.category !== undefined && p.category !== null) {
+            var key = String(p.category);
+            if (countMap[key] !== undefined) countMap[key]++;
+            else {
+                // coba match by id atau name
+                categories.forEach(function(cat) {
+                    if (String(cat.id) === key || cat.name === p.category) {
+                        countMap[String(cat.id)]++;
+                    }
+                });
+            }
+        }
+    });
+
+    // Total semua produk
+    var totalAll = products.length;
+
+    // Header summary
+    var summaryHTML = '<div style="grid-column:1/-1;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border-radius:12px;padding:16px 20px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;">' +
+        '<div><i class="fas fa-boxes" style="margin-right:8px;"></i><strong>Total Semua Produk</strong></div>' +
+        '<span style="font-size:24px;font-weight:700;">' + totalAll + ' produk</span>' +
+        '</div>';
+
+    var cardsHTML = categories.map(function(cat) {
+        var count = countMap[String(cat.id)] || 0;
+        var pct = totalAll > 0 ? Math.round((count / totalAll) * 100) : 0;
+        var badgeColor = count === 0 ? '#ccc' : count < 3 ? '#ff9800' : '#4CAF50';
+
         return '<div class="category-card-admin">' +
             '<div class="category-card-icon"><i class="' + cat.icon + '"></i></div>' +
             '<h3>' + cat.name + '</h3>' +
             '<p class="category-card-desc">' + (cat.description || '') + '</p>' +
-            '<div class="category-card-actions">' +
-                '<button class="btn-edit" onclick="editCategory(\'' + cat.id + '\')"><i class="fas fa-edit"></i></button>' +
-                '<button class="btn-delete" onclick="deleteCategory(\'' + cat.id + '\')"><i class="fas fa-trash"></i></button>' +
+
+            // Counter badge
+            '<div style="margin:10px 0 6px;">' +
+                '<span style="display:inline-block;background:' + badgeColor + ';color:white;font-size:13px;font-weight:700;padding:4px 12px;border-radius:20px;">' +
+                    count + ' produk' +
+                '</span>' +
+            '</div>' +
+
+            // Progress bar
+            '<div style="background:#f0f0f0;border-radius:4px;height:6px;margin-bottom:10px;overflow:hidden;">' +
+                '<div style="background:linear-gradient(90deg,#667eea,#764ba2);height:100%;width:' + pct + '%;border-radius:4px;transition:width 0.5s ease;"></div>' +
+            '</div>' +
+            '<small style="color:#999;font-size:11px;">' + pct + '% dari total produk</small>' +
+
+            '<div class="category-card-actions" style="margin-top:10px;">' +
+                '<button class="btn-edit" onclick="editCategory(\'' + cat.id + '\')" title="Edit kategori"><i class="fas fa-edit"></i></button>' +
+                '<button class="btn-delete" onclick="deleteCategory(\'' + cat.id + '\')" title="Hapus kategori"><i class="fas fa-trash"></i></button>' +
             '</div></div>';
-    }).join('') || '<p class="empty-state">Belum ada kategori</p>';
+    }).join('');
+
+    document.getElementById('categories-list').innerHTML = summaryHTML + (cardsHTML || '<p class="empty-state">Belum ada kategori</p>');
 }
 
 function openCategoryModal() {
