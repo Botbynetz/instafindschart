@@ -84,18 +84,16 @@ async function loadProducts() {
         '<i class="fas fa-spinner fa-spin" style="font-size:30px;display:block;margin-bottom:10px;"></i>' +
         'Memuat produk...</div>';
 
-    // Load kategori dulu untuk mapping ID → nama
+    // Load kategori dari localStorage (sama seperti admin panel)
     try {
-        var catResult = await window.supabase.from('categories').select('id, name');
-        if (catResult.data) {
-            catResult.data.forEach(function(cat) {
-                // Store dengan berbagai format key agar pasti match
-                categoryNameMap[String(cat.id)] = cat.name;
-                categoryNameMap[cat.id] = cat.name;
-                if (cat.name) categoryNameMap[cat.name.toLowerCase()] = cat.name;
-            });
-            console.log('📂 Categories loaded:', JSON.stringify(categoryNameMap));
-        }
+        var storedCats = localStorage.getItem('instafinds_categories');
+        var localCats = storedCats ? JSON.parse(storedCats) : [];
+        localCats.forEach(function(cat) {
+            categoryNameMap[String(cat.id)] = cat.name;
+            categoryNameMap[cat.id] = cat.name;
+            if (cat.name) categoryNameMap[cat.name.toLowerCase()] = cat.name;
+        });
+        console.log('📂 Categories from localStorage:', JSON.stringify(categoryNameMap));
     } catch(e) {}
 
     try {
