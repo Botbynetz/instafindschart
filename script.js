@@ -121,9 +121,6 @@ function renderProducts(products) {
     // Banner slider (events + produk terpopuler)
     initBannerSlider(products);
 
-    // Category grid (Shopee style)
-    buildCategoryGrid(products);
-
     // Load highlight cards
     loadHighlightCards(products);
 
