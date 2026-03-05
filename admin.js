@@ -172,6 +172,7 @@ function navigateToPage(pageName) {
     if (pageName === 'dashboard') renderDashboard();
     else if (pageName === 'products') renderProducts();
     else if (pageName === 'categories') renderCategories();
+    else if (pageName === 'events') loadEvents();
 }
 
 // ========================
@@ -1034,6 +1035,120 @@ async function postToTelegram(product, isEdit) {
     } catch (err) {
         console.error('❌ Gagal post ke Telegram:', err);
     }
+}
+
+// ========================
+// EVENTS CRUD
+// ========================
+var editingEventId = null;
+
+async function loadEvents() {
+    var list = document.getElementById('events-list');
+    if (!list) return;
+    list.innerHTML = '<div class="empty-state">Memuat event...</div>';
+
+    try {
+        var result = await window.supabase.from('events').select('*').order('createdat', { ascending: false });
+        if (result.error) throw result.error;
+        var events = result.data || [];
+
+        if (events.length === 0) {
+            list.innerHTML = '<div class="empty-state">Belum ada event. Klik "+ Tambah Event" untuk membuat event baru.</div>';
+            return;
+        }
+
+        list.innerHTML = events.map(function(ev) {
+            return '<div class="event-card-admin" style="display:flex;align-items:center;gap:16px;background:white;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">' +
+                (ev.image ? '<img src="' + ev.image + '" style="width:80px;height:80px;object-fit:cover;border-radius:8px;flex-shrink:0;">' : '<div style="width:80px;height:80px;background:#f0f0f0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;">📅</div>') +
+                '<div style="flex:1;min-width:0;">' +
+                    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+                        '<span style="font-weight:700;font-size:15px;">' + ev.title + '</span>' +
+                        '<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:' + (ev.active ? '#e8f5e9;color:#2e7d32' : '#fff3e0;color:#e65100') + ';">' + (ev.active ? '● Aktif' : '● Nonaktif') + '</span>' +
+                    '</div>' +
+                    '<div style="font-size:12px;color:#888;">' + (ev.description || '') + '</div>' +
+                    '<div style="font-size:11px;color:#bbb;margin-top:4px;">🔗 ' + (ev.link || '') + '</div>' +
+                '</div>' +
+                '<div style="display:flex;gap:8px;flex-shrink:0;">' +
+                    '<button class="btn-edit" onclick="editEvent(&#39;' + ev.id + '&#39;)" title="Edit"><i class="fas fa-edit"></i></button>' +
+                    '<button class="btn-delete" onclick="deleteEvent(&#39;' + ev.id + '&#39;)" title="Hapus"><i class="fas fa-trash"></i></button>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    } catch(err) {
+        list.innerHTML = '<div class="empty-state">Gagal memuat event: ' + err.message + '</div>';
+    }
+}
+
+function openEventModal(id) {
+    editingEventId = null;
+    document.getElementById('event-modal-title').textContent = 'Tambah Event';
+    document.getElementById('event-title').value = '';
+    document.getElementById('event-label-input').value = 'Event Spesial';
+    document.getElementById('event-description').value = '';
+    document.getElementById('event-image').value = '';
+    document.getElementById('event-link').value = '';
+    document.getElementById('event-buttontext').value = 'Lihat Sekarang';
+    document.getElementById('event-active').checked = true;
+    openModal('event-modal');
+}
+
+async function editEvent(id) {
+    var result = await window.supabase.from('events').select('*').eq('id', id).single();
+    if (result.error || !result.data) return;
+    var ev = result.data;
+    editingEventId = id;
+    document.getElementById('event-modal-title').textContent = 'Edit Event';
+    document.getElementById('event-title').value = ev.title || '';
+    document.getElementById('event-label-input').value = ev.label || 'Event Spesial';
+    document.getElementById('event-description').value = ev.description || '';
+    document.getElementById('event-image').value = ev.image || '';
+    document.getElementById('event-link').value = ev.link || '';
+    document.getElementById('event-buttontext').value = ev.buttontext || 'Lihat Sekarang';
+    document.getElementById('event-active').checked = ev.active !== false;
+    openModal('event-modal');
+}
+
+async function saveEvent() {
+    var title = document.getElementById('event-title').value.trim();
+    var link = document.getElementById('event-link').value.trim();
+    if (!title) { alert('Judul event wajib diisi!'); return; }
+    if (!link) { alert('Link tujuan wajib diisi!'); return; }
+
+    var data = {
+        title: title,
+        label: document.getElementById('event-label-input').value.trim() || 'Event Spesial',
+        description: document.getElementById('event-description').value.trim(),
+        image: document.getElementById('event-image').value.trim(),
+        link: link,
+        buttontext: document.getElementById('event-buttontext').value.trim() || 'Lihat Sekarang',
+        active: document.getElementById('event-active').checked
+    };
+
+    try {
+        var result;
+        if (editingEventId) {
+            result = await window.supabase.from('events').update(data).eq('id', editingEventId);
+        } else {
+            data.id = Date.now().toString();
+            data.createdat = new Date().toISOString();
+            result = await window.supabase.from('events').insert([data]);
+        }
+        if (result.error) throw result.error;
+        closeModal('event-modal');
+        loadEvents();
+        showNotification('✅ Event berhasil ' + (editingEventId ? 'diperbarui' : 'ditambahkan') + '!', 'success');
+        editingEventId = null;
+    } catch(err) {
+        showNotification('❌ Gagal simpan event: ' + err.message, 'error');
+    }
+}
+
+async function deleteEvent(id) {
+    if (!confirm('Hapus event ini?')) return;
+    var result = await window.supabase.from('events').delete().eq('id', id);
+    if (result.error) { showNotification('❌ Gagal hapus event', 'error'); return; }
+    loadEvents();
+    showNotification('✅ Event dihapus!', 'success');
 }
 
 // ========================
