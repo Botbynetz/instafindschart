@@ -144,8 +144,10 @@ function renderProducts(products) {
         var affLink = product.affiliatelink || '#';
 
         // Build carousel slides
-        var slidesHTML = images.map(function(img) {
-            return '<div class="product-image"><img src="' + img + '" alt="' + product.name + '" loading="lazy"></div>';
+        var productName = product.name;
+        var imagesJson = JSON.stringify(images).replace(/'/g, '&#39;');
+        var slidesHTML = images.map(function(img, idx) {
+            return '<div class="product-image" onclick="openLightbox(\'' + img + '\', ' + idx + ', ' + JSON.stringify(images).replace(/"/g,'&quot;') + ')"><img src="' + img + '" alt="' + productName + '" loading="lazy"></div>';
         }).join('');
 
         // Build indicators (only if > 1 image)
@@ -700,3 +702,98 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 console.log('✅ script.js loaded!');
+
+
+// ========================
+// LIGHTBOX
+// ========================
+var lbImages = [];
+var lbCurrent = 0;
+
+function openLightbox(imgUrl, idx, imagesArr) {
+    lbImages = imagesArr || [imgUrl];
+    lbCurrent = idx || 0;
+
+    // Create lightbox if not exists
+    var lb = document.getElementById('lightbox-overlay');
+    if (!lb) {
+        lb = document.createElement('div');
+        lb.id = 'lightbox-overlay';
+        lb.innerHTML =
+            '<div class="lb-backdrop" onclick="closeLightbox()"></div>' +
+            '<div class="lb-container">' +
+                '<button class="lb-close" onclick="closeLightbox()"><i class="fas fa-times"></i></button>' +
+                '<button class="lb-nav lb-prev" onclick="lbGo(-1)"><i class="fas fa-chevron-left"></i></button>' +
+                '<div class="lb-img-wrap">' +
+                    '<img id="lb-img" src="" alt="">' +
+                '</div>' +
+                '<button class="lb-nav lb-next" onclick="lbGo(1)"><i class="fas fa-chevron-right"></i></button>' +
+                '<div class="lb-dots" id="lb-dots"></div>' +
+                '<div class="lb-counter" id="lb-counter"></div>' +
+            '</div>';
+        document.body.appendChild(lb);
+
+        // Swipe support
+        var touchStartX = 0;
+        lb.addEventListener('touchstart', function(e){ touchStartX = e.touches[0].clientX; }, {passive:true});
+        lb.addEventListener('touchend', function(e){
+            var diff = touchStartX - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 50) lbGo(diff > 0 ? 1 : -1);
+        });
+
+        // Keyboard support
+        document.addEventListener('keydown', function(e){
+            if (!document.getElementById('lightbox-overlay').style.display || document.getElementById('lightbox-overlay').style.display === 'none') return;
+            if (e.key === 'ArrowRight') lbGo(1);
+            if (e.key === 'ArrowLeft') lbGo(-1);
+            if (e.key === 'Escape') closeLightbox();
+        });
+    }
+
+    lb.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    lbRender();
+}
+
+function lbRender() {
+    var img = document.getElementById('lb-img');
+    var dots = document.getElementById('lb-dots');
+    var counter = document.getElementById('lb-counter');
+    var prev = document.querySelector('.lb-prev');
+    var next = document.querySelector('.lb-next');
+
+    if (img) {
+        img.style.opacity = '0';
+        img.src = lbImages[lbCurrent];
+        img.onload = function(){ img.style.opacity = '1'; };
+    }
+
+    if (counter) counter.textContent = (lbCurrent + 1) + ' / ' + lbImages.length;
+
+    // Show/hide nav
+    if (prev) prev.style.display = lbImages.length > 1 ? 'flex' : 'none';
+    if (next) next.style.display = lbImages.length > 1 ? 'flex' : 'none';
+
+    // Dots
+    if (dots) {
+        dots.innerHTML = lbImages.length > 1 ? lbImages.map(function(_, i) {
+            return '<span class="lb-dot' + (i === lbCurrent ? ' active' : '') + '" onclick="lbGoTo(' + i + ')"></span>';
+        }).join('') : '';
+    }
+}
+
+function lbGo(dir) {
+    lbCurrent = ((lbCurrent + dir) + lbImages.length) % lbImages.length;
+    lbRender();
+}
+
+function lbGoTo(i) {
+    lbCurrent = i;
+    lbRender();
+}
+
+function closeLightbox() {
+    var lb = document.getElementById('lightbox-overlay');
+    if (lb) lb.style.display = 'none';
+    document.body.style.overflow = '';
+}
