@@ -181,41 +181,28 @@
                         <h2 id="event-modal-title">Tambah Event</h2>
                         <button class="btn-close-modal" onclick="closeModal('event-modal')"><i class="fas fa-times"></i></button>
                     </div>
-                    <div style="padding:20px;display:flex;flex-direction:column;gap:14px;">
+                    <div style="padding:20px;display:flex;flex-direction:column;gap:16px;">
                         <div class="form-group">
                             <label>Judul Event *</label>
                             <input type="text" id="event-title" placeholder="Contoh: Flash Sale 12.12">
                         </div>
                         <div class="form-group">
-                            <label>Label Badge</label>
-                            <input type="text" id="event-label-input" placeholder="Event Spesial" value="Event Spesial">
-                        </div>
-                        <div class="form-group">
-                            <label>Deskripsi</label>
-                            <textarea id="event-description" placeholder="Deskripsi singkat..." rows="2" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Gambar Banner</label>
-                            <!-- Upload atau URL -->
-                            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-                                <button type="button" onclick="document.getElementById('event-img-file').click()" style="padding:7px 14px;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap;">
-                                    <i class="fas fa-upload"></i> Upload Foto
-                                </button>
-                                <span id="event-img-status" style="font-size:12px;color:#888;">atau masukkan URL di bawah</span>
+                            <label>Gambar Banner <small style="color:#aaa;">(opsional)</small></label>
+                            <div style="border:2px dashed #ddd;border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:border-color 0.2s;" onclick="document.getElementById('event-img-file').click()" id="event-drop-zone">
+                                <div id="event-img-preview" style="display:none;margin-bottom:8px;">
+                                    <img id="event-img-preview-img" src="" style="width:100%;max-height:150px;object-fit:cover;border-radius:8px;">
+                                </div>
+                                <div id="event-upload-placeholder">
+                                    <i class="fas fa-image" style="font-size:28px;color:#ccc;display:block;margin-bottom:8px;"></i>
+                                    <span id="event-img-status" style="font-size:13px;color:#999;">Klik untuk upload gambar banner</span>
+                                </div>
                             </div>
                             <input type="file" id="event-img-file" accept="image/*" style="display:none;" onchange="uploadEventImage(this)">
-                            <input type="url" id="event-image" placeholder="https://... (URL gambar banner)">
-                            <div id="event-img-preview" style="display:none;margin-top:8px;">
-                                <img id="event-img-preview-img" src="" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;">
-                            </div>
+                            <input type="hidden" id="event-image">
                         </div>
                         <div class="form-group">
-                            <label>Link Tujuan *</label>
-                            <input type="url" id="event-link" placeholder="https://...">
-                        </div>
-                        <div class="form-group">
-                            <label>Teks Tombol</label>
-                            <input type="text" id="event-buttontext" placeholder="Lihat Sekarang">
+                            <label>Link Tujuan <small style="color:#aaa;">(opsional)</small></label>
+                            <input type="url" id="event-link" placeholder="https://... kosongkan jika hanya pengumuman">
                         </div>
                         <div class="form-group">
                             <label class="checkbox-label">
