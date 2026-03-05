@@ -118,6 +118,12 @@ function renderProducts(products) {
     // Build filter kategori dari produk yang ada
     buildCategoryFilters(products);
 
+    // Banner slider (events + produk terpopuler)
+    initBannerSlider(products);
+
+    // Category grid (Shopee style)
+    buildCategoryGrid(products);
+
     // Load highlight cards
     loadHighlightCards(products);
 
@@ -281,6 +287,167 @@ async function trackAndRedirect(link, productId) {
         console.error('❌ Error tracking click:', err);
     }
     return false;
+}
+
+// ========================
+// BANNER SLIDER
+// ========================
+var bannerCurrent = 0;
+var bannerAutoSlide;
+var bannerSlides = [];
+
+async function initBannerSlider(products) {
+    var track = document.getElementById('banner-track');
+    var dotsEl = document.getElementById('banner-dots');
+    if (!track) return;
+
+    bannerSlides = [];
+
+    // Load events dari Supabase sebagai banner
+    try {
+        if (window.supabase) {
+            var result = await window.supabase.from('events').select('*').eq('active', true).order('createdat', { ascending: false });
+            if (result.data && result.data.length > 0) {
+                result.data.forEach(function(ev) {
+                    bannerSlides.push({
+                        image: ev.image || '',
+                        title: ev.title,
+                        desc: ev.description || '',
+                        link: ev.link || '#',
+                        btnText: ev.buttontext || 'Lihat Sekarang',
+                        label: ev.label || 'Event',
+                        color: '#667eea'
+                    });
+                });
+            }
+        }
+    } catch(e) {}
+
+    // Fallback banner kalau tidak ada event
+    if (bannerSlides.length === 0) {
+        // Banner dari produk terpopuler
+        if (products && products.length > 0) {
+            var top3 = products.slice().sort(function(a,b){ return (b.clicks||0)-(a.clicks||0); }).slice(0,3);
+            top3.forEach(function(p, i) {
+                var colors = ['#667eea','#f093fb','#11998e'];
+                bannerSlides.push({
+                    image: p.image || '',
+                    title: p.name,
+                    desc: p.description ? p.description.substring(0,80)+'...' : '',
+                    link: p.affiliatelink || '#',
+                    btnText: '🛒 Beli Sekarang',
+                    label: i===0 ? '🔥 Terpopuler' : '⭐ Pilihan',
+                    color: colors[i]
+                });
+            });
+        }
+    }
+
+    if (bannerSlides.length === 0) {
+        document.getElementById('banner-slider').style.display = 'none';
+        return;
+    }
+
+    // Render slides
+    track.innerHTML = bannerSlides.map(function(slide, i) {
+        return '<div class="banner-slide" onclick="window.open(this.dataset.link,\'_blank\')" data-link="'+slide.link+'" style="cursor:pointer;">' +
+            (slide.image
+                ? '<img src="'+slide.image+'" alt="'+slide.title+'" class="banner-bg-img">'
+                : '<div class="banner-bg-color" style="background:linear-gradient(135deg,'+slide.color+',#764ba2);"></div>'
+            ) +
+            '<div class="banner-overlay"></div>' +
+            '<div class="banner-content">' +
+                '<span class="banner-label">'+slide.label+'</span>' +
+                '<div class="banner-title">'+slide.title+'</div>' +
+                (slide.desc ? '<div class="banner-desc">'+slide.desc+'</div>' : '') +
+                '<button class="banner-btn" onclick="event.stopPropagation();window.open(this.closest(\'.banner-slide\').dataset.link,\'_blank\')">'+slide.btnText+'</button>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+
+    // Dots
+    dotsEl.innerHTML = bannerSlides.map(function(_, i) {
+        return '<button class="banner-dot'+(i===0?' active':'')+'" onclick="goBannerSlide('+i+')"></button>';
+    }).join('');
+
+    // Nav buttons
+    var prevBtn = document.getElementById('banner-prev');
+    var nextBtn = document.getElementById('banner-next');
+    if (prevBtn) prevBtn.onclick = function() { goBannerSlide(bannerCurrent - 1); };
+    if (nextBtn) nextBtn.onclick = function() { goBannerSlide(bannerCurrent + 1); };
+
+    // Hide nav if only 1 slide
+    if (bannerSlides.length <= 1) {
+        if (prevBtn) prevBtn.style.display = 'none';
+        if (nextBtn) nextBtn.style.display = 'none';
+        dotsEl.style.display = 'none';
+    }
+
+    goBannerSlide(0);
+    startBannerAuto();
+}
+
+function goBannerSlide(n) {
+    bannerCurrent = ((n % bannerSlides.length) + bannerSlides.length) % bannerSlides.length;
+    var track = document.getElementById('banner-track');
+    if (track) track.style.transform = 'translateX(-' + (bannerCurrent * 100) + '%)';
+    document.querySelectorAll('.banner-dot').forEach(function(d, i) {
+        d.classList.toggle('active', i === bannerCurrent);
+    });
+}
+
+function startBannerAuto() {
+    clearInterval(bannerAutoSlide);
+    bannerAutoSlide = setInterval(function() { goBannerSlide(bannerCurrent + 1); }, 4000);
+    var slider = document.getElementById('banner-slider');
+    if (slider) {
+        slider.onmouseenter = function() { clearInterval(bannerAutoSlide); };
+        slider.onmouseleave = function() { startBannerAuto(); };
+    }
+}
+
+// ========================
+// CATEGORY GRID
+// ========================
+var CATEGORY_ICON_MAP = {
+    'kecantikan': { icon: 'fas fa-spa', color: '#e91e8c', bg: '#fce4ec' },
+    'fashion': { icon: 'fas fa-shirt', color: '#e65100', bg: '#fff3e0' },
+    'sepatu': { icon: 'fas fa-shoe-prints', color: '#1565c0', bg: '#e3f2fd' },
+    'aksesoris': { icon: 'fas fa-ring', color: '#6a1b9a', bg: '#f3e5f5' },
+    'elektronik': { icon: 'fas fa-mobile-alt', color: '#00695c', bg: '#e0f2f1' },
+    'rumah tangga': { icon: 'fas fa-home', color: '#ef6c00', bg: '#fff8e1' },
+    'tas': { icon: 'fas fa-shopping-bag', color: '#c62828', bg: '#ffebee' },
+    'kesehatan': { icon: 'fas fa-heartbeat', color: '#2e7d32', bg: '#e8f5e9' },
+    'makanan': { icon: 'fas fa-utensils', color: '#f57f17', bg: '#fffde7' },
+    'olahraga': { icon: 'fas fa-running', color: '#1976d2', bg: '#e3f2fd' },
+    'default': { icon: 'fas fa-tag', color: '#667eea', bg: '#ede9fe' }
+};
+
+function buildCategoryGrid(products) {
+    var grid = document.getElementById('category-grid');
+    if (!grid) return;
+
+    // Hitung produk per kategori
+    var catMap = {};
+    products.forEach(function(p) {
+        var key = String(p.category || '').toLowerCase().trim();
+        if (!catMap[key]) catMap[key] = { name: p.category, count: 0, key: key };
+        catMap[key].count++;
+    });
+
+    var cats = Object.values(catMap).filter(function(c) { return c.count > 0; });
+    if (cats.length === 0) { grid.parentElement.style.display = 'none'; return; }
+
+    grid.innerHTML = cats.map(function(cat) {
+        var style = CATEGORY_ICON_MAP[cat.key] || CATEGORY_ICON_MAP['default'];
+        return '<div class="cat-grid-item" onclick="filterByCategory(this.dataset.catkey)" data-catkey="'+cat.key+'">' +
+            '<div class="cat-grid-icon" style="background:'+style.bg+';color:'+style.color+';">' +
+                '<i class="'+style.icon+'"></i>' +
+            '</div>' +
+            '<div class="cat-grid-name">'+cat.name+'</div>' +
+            '<div class="cat-grid-count">'+cat.count+' produk</div>' +
+        '</div>';
+    }).join('');
 }
 
 // ========================
@@ -456,8 +623,9 @@ function filterByCategory(categoryId) {
     var visibleCount = 0;
 
     productCards.forEach(function(card) {
-        var cardCategory = card.dataset.category || '';
-        var isVisible = categoryId === 'all' || cardCategory === categoryId;
+        var cardCategory = String(card.dataset.category || '').toLowerCase().trim();
+        var filterKey = String(categoryId || '').toLowerCase().trim();
+        var isVisible = filterKey === 'all' || cardCategory === filterKey;
         card.style.display = isVisible ? '' : 'none';
         if (isVisible) visibleCount++;
     });
