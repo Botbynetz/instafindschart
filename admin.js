@@ -1106,6 +1106,10 @@ function openEventModal(id) {
     document.getElementById('event-link').value = '';
     document.getElementById('event-buttontext').value = 'Lihat Sekarang';
     document.getElementById('event-active').checked = true;
+    var preview = document.getElementById('event-img-preview');
+    var status = document.getElementById('event-img-status');
+    if (preview) preview.style.display = 'none';
+    if (status) status.textContent = 'atau masukkan URL di bawah';
     openModal('event-modal');
 }
 
@@ -1123,6 +1127,29 @@ async function editEvent(id) {
     document.getElementById('event-buttontext').value = ev.buttontext || 'Lihat Sekarang';
     document.getElementById('event-active').checked = ev.active !== false;
     openModal('event-modal');
+}
+
+async function uploadEventImage(input) {
+    var file = input.files[0];
+    if (!file) return;
+    var statusEl = document.getElementById('event-img-status');
+    var imageInput = document.getElementById('event-image');
+    var preview = document.getElementById('event-img-preview');
+    var previewImg = document.getElementById('event-img-preview-img');
+
+    if (statusEl) statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengupload...';
+
+    try {
+        var url = await uploadToCloudinary(file);
+        if (imageInput) imageInput.value = url;
+        if (previewImg) previewImg.src = url;
+        if (preview) preview.style.display = 'block';
+        if (statusEl) statusEl.textContent = '✅ Gambar berhasil diupload!';
+        showNotification('✅ Gambar banner berhasil diupload!', 'success');
+    } catch(err) {
+        if (statusEl) statusEl.textContent = '❌ Gagal upload: ' + err.message;
+        showNotification('❌ Gagal upload gambar: ' + err.message, 'error');
+    }
 }
 
 async function saveEvent() {
@@ -1173,16 +1200,25 @@ async function deleteEvent(id) {
 // ========================
 function openModal(modalId) {
     var modal = document.getElementById(modalId);
-    if (modal) modal.classList.add('active');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+    }
 }
 
 function closeModal(modalId) {
     var modal = document.getElementById(modalId);
-    if (modal) modal.classList.remove('active');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
 }
 
 document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('modal')) e.target.classList.remove('active');
+    if (e.target.classList.contains('modal')) {
+        e.target.style.display = 'none';
+        e.target.classList.remove('active');
+    }
 });
 
 // ========================
