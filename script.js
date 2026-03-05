@@ -300,44 +300,68 @@ async function initBannerSlider(products) {
 
     bannerSlides = [];
 
-    // Load events dari Supabase sebagai banner
+    // 1. Events aktif dari Supabase (tampil paling atas)
     try {
         if (window.supabase) {
             var result = await window.supabase.from('events').select('*').eq('active', true).order('createdat', { ascending: false });
-            if (result.data && result.data.length > 0) {
+            if (result.data) {
                 result.data.forEach(function(ev) {
                     bannerSlides.push({
                         image: ev.image || '',
                         title: ev.title,
                         desc: ev.description || '',
-                        link: ev.link || '#',
-                        btnText: ev.buttontext || 'Lihat Sekarang',
-                        label: ev.label || 'Event',
-                        color: '#667eea'
+                        link: ev.link || '',
+                        btnText: ev.link ? (ev.buttontext || 'Lihat Sekarang') : '',
+                        label: '📅 Event',
+                        color: '#667eea',
+                        isEvent: true
                     });
                 });
             }
         }
     } catch(e) {}
 
-    // Fallback banner kalau tidak ada event
-    if (bannerSlides.length === 0) {
-        // Banner dari produk terpopuler
-        if (products && products.length > 0) {
-            var top3 = products.slice().sort(function(a,b){ return (b.clicks||0)-(a.clicks||0); }).slice(0,3);
-            top3.forEach(function(p, i) {
-                var colors = ['#667eea','#f093fb','#11998e'];
-                bannerSlides.push({
-                    image: p.image || '',
-                    title: p.name,
-                    desc: p.description ? p.description.substring(0,80)+'...' : '',
-                    link: p.affiliatelink || '#',
-                    btnText: '🛒 Beli Sekarang',
-                    label: i===0 ? '🔥 Terpopuler' : '⭐ Pilihan',
-                    color: colors[i]
-                });
+    // 2. Top 3 paling banyak diklik
+    if (products && products.length > 0) {
+        var byClicks = products.slice().sort(function(a,b){ return (b.clicks||0)-(a.clicks||0); });
+        var topPopular = byClicks.slice(0, Math.min(3, products.length));
+        var popLabels = ['🔥 Terpopuler', '🔥 #2 Terpopuler', '🔥 #3 Terpopuler'];
+        topPopular.forEach(function(p, i) {
+            bannerSlides.push({
+                image: p.image || '',
+                title: p.name,
+                desc: (p.clicks||0) > 0 ? '👆 '+(p.clicks||0)+' klik' : '⭐ Produk Unggulan',
+                link: p.affiliatelink || '',
+                btnText: '🛒 Beli Sekarang',
+                label: popLabels[i],
+                color: '#ff6b35',
+                productId: p.id
             });
-        }
+        });
+    }
+
+    // 3. Top 3 produk terbaru (skip duplikat dari popular)
+    if (products && products.length > 0) {
+        var popularIds = bannerSlides.filter(function(s){ return s.productId; }).map(function(s){ return s.productId; });
+        var byDate = products.slice().sort(function(a,b){ return new Date(b.createdat||0)-new Date(a.createdat||0); });
+        var newLabels = ['🆕 Baru Masuk', '🆕 Produk Baru', '🆕 Baru Ditambahkan'];
+        var newCount = 0;
+        byDate.forEach(function(p) {
+            if (newCount >= 3) return;
+            if (popularIds.indexOf(p.id) !== -1) return;
+            var tgl = p.createdat ? new Date(p.createdat).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}) : '';
+            bannerSlides.push({
+                image: p.image || '',
+                title: p.name,
+                desc: tgl ? '📆 Ditambahkan '+tgl : '🛍️ Produk terbaru',
+                link: p.affiliatelink || '',
+                btnText: '🛒 Beli Sekarang',
+                label: newLabels[newCount],
+                color: '#11998e',
+                productId: p.id
+            });
+            newCount++;
+        });
     }
 
     if (bannerSlides.length === 0) {
@@ -347,7 +371,8 @@ async function initBannerSlider(products) {
 
     // Render slides
     track.innerHTML = bannerSlides.map(function(slide, i) {
-        return '<div class="banner-slide" onclick="window.open(this.dataset.link,\'_blank\')" data-link="'+slide.link+'" style="cursor:pointer;">' +
+        var hasLink = slide.link && slide.link !== '';
+        return '<div class="banner-slide" '+(hasLink ? 'onclick="window.open(this.dataset.link,\'_blank\')" style="cursor:pointer;"' : '')+' data-link="'+slide.link+'">' +
             (slide.image
                 ? '<img src="'+slide.image+'" alt="'+slide.title+'" class="banner-bg-img">'
                 : '<div class="banner-bg-color" style="background:linear-gradient(135deg,'+slide.color+',#764ba2);"></div>'
@@ -357,7 +382,7 @@ async function initBannerSlider(products) {
                 '<span class="banner-label">'+slide.label+'</span>' +
                 '<div class="banner-title">'+slide.title+'</div>' +
                 (slide.desc ? '<div class="banner-desc">'+slide.desc+'</div>' : '') +
-                '<button class="banner-btn" onclick="event.stopPropagation();window.open(this.closest(\'.banner-slide\').dataset.link,\'_blank\')">'+slide.btnText+'</button>' +
+                (slide.btnText ? '<button class="banner-btn" onclick="event.stopPropagation();window.open(this.closest(\'.banner-slide\').dataset.link,\'_blank\')">'+slide.btnText+'</button>' : '') +
             '</div>' +
         '</div>';
     }).join('');
@@ -454,130 +479,9 @@ var hlCurrent = 0;
 var hlAuto;
 var hlSlides = [];
 
+// loadHighlightCards merged into initBannerSlider
 async function loadHighlightCards(products) {
-    hlSlides = [];
-
-    if (products.length > 0) {
-        // Top 3 paling banyak diklik
-        var byClicks = products.slice().sort(function(a,b){ return (b.clicks||0)-(a.clicks||0); });
-        var topPopular = byClicks.slice(0, Math.min(3, products.length));
-
-        // Top 3 paling baru diupload
-        var byDate = products.slice().sort(function(a,b){ return new Date(b.createdat||0)-new Date(a.createdat||0); });
-        var topNew = byDate.slice(0, Math.min(3, products.length));
-
-        // Kumpulkan ID produk popular agar tidak duplikat di slide baru
-        var popularIds = topPopular.map(function(p){ return p.id; });
-
-        // Slide: Top 3 Terpopuler
-        topPopular.forEach(function(p, i) {
-            var labels = ['🔥 Terpopuler', '🔥 #2 Terpopuler', '🔥 #3 Terpopuler'];
-            hlSlides.push({
-                badge: labels[i] || '🔥 Terpopuler',
-                badgeColor: '#ff6b35',
-                image: p.image || '',
-                title: p.name,
-                sub: (p.clicks||0) > 0 ? '👆 '+(p.clicks||0)+' klik' : '⭐ Produk Unggulan',
-                btnText: 'Lihat Produk',
-                btnColor: '#ff6b35',
-                action: function(prod){ return function(){ trackAndRedirect(prod.affiliatelink, prod.id); }; }(p)
-            });
-        });
-
-        // Slide: Top 3 Terbaru (skip kalau sudah ada di popular)
-        topNew.forEach(function(p, i) {
-            if (popularIds.indexOf(p.id) !== -1) return; // skip duplikat
-            var tgl = p.createdat ? new Date(p.createdat).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}) : '';
-            var labels = ['🆕 Baru Masuk', '🆕 Produk Baru', '🆕 Baru Ditambahkan'];
-            hlSlides.push({
-                badge: labels[i] || '🆕 Baru',
-                badgeColor: '#11998e',
-                image: p.image || '',
-                title: p.name,
-                sub: tgl ? '📆 '+tgl : '🛍️ Produk terbaru',
-                btnText: 'Lihat Produk',
-                btnColor: '#11998e',
-                action: function(prod){ return function(){ trackAndRedirect(prod.affiliatelink, prod.id); }; }(p)
-            });
-        });
-    }
-
-    // Slide Event aktif dari Supabase
-    try {
-        if (window.supabase) {
-            var evResult = await window.supabase.from('events').select('*').eq('active',true).order('createdat',{ascending:false});
-            if (evResult.data) {
-                evResult.data.forEach(function(ev) {
-                    hlSlides.push({
-                        badge: '📅 Event',
-                        badgeColor: '#667eea',
-                        image: ev.image || '',
-                        title: ev.title,
-                        sub: ev.description || '',
-                        btnText: ev.link ? (ev.buttontext || 'Lihat Sekarang') : '',
-                        btnColor: '#667eea',
-                        action: ev.link ? (function(link){ return function(){ window.open(link,'_blank'); }; }(ev.link)) : function(){}
-                    });
-                });
-            }
-        }
-    } catch(e) {}
-
-    renderHighlightSlideshow();
-}
-
-function renderHighlightSlideshow() {
-    var show = document.getElementById('highlight-slideshow');
-    var track = document.getElementById('highlight-track');
-    var dots = document.getElementById('highlight-dots');
-    if (!show || !track || hlSlides.length === 0) { if(show) show.style.display='none'; return; }
-
-    show.style.display = 'block';
-
-    track.innerHTML = hlSlides.map(function(s, i) {
-        return '<div class="hl-slide">' +
-            '<div class="hl-slide-img" style="background-image:url('+s.image+');">' +
-                '<div class="hl-slide-overlay"></div>' +
-                '<span class="hl-slide-badge" style="background:'+s.badgeColor+'">'+s.badge+'</span>' +
-            '</div>' +
-            '<div class="hl-slide-info">' +
-                '<div class="hl-slide-title">'+s.title+'</div>' +
-                '<div class="hl-slide-sub">'+s.sub+'</div>' +
-                (s.btnText ? '<button class="hl-slide-btn" style="background:'+s.btnColor+'" data-idx="'+i+'">'+s.btnText+'</button>' : '') +
-            '</div>' +
-        '</div>';
-    }).join('');
-
-    // Bind button actions
-    track.querySelectorAll('.hl-slide-btn').forEach(function(btn) {
-        var idx = parseInt(btn.dataset.idx);
-        btn.addEventListener('click', hlSlides[idx].action);
-    });
-
-    // Dots
-    dots.innerHTML = hlSlides.map(function(_, i) {
-        return '<button class="hl-dot'+(i===0?' active':'')+'" data-i="'+i+'"></button>';
-    }).join('');
-    dots.querySelectorAll('.hl-dot').forEach(function(d) {
-        d.addEventListener('click', function(){ goHlSlide(parseInt(d.dataset.i)); });
-    });
-
-    goHlSlide(0);
-
-    // Auto slide
-    clearInterval(hlAuto);
-    if (hlSlides.length > 1) {
-        hlAuto = setInterval(function(){ goHlSlide(hlCurrent+1); }, 4500);
-        show.onmouseenter = function(){ clearInterval(hlAuto); };
-        show.onmouseleave = function(){ hlAuto = setInterval(function(){ goHlSlide(hlCurrent+1); }, 4500); };
-    }
-}
-
-function goHlSlide(n) {
-    hlCurrent = ((n % hlSlides.length) + hlSlides.length) % hlSlides.length;
-    var track = document.getElementById('highlight-track');
-    if (track) track.style.transform = 'translateX(-'+(hlCurrent*100)+'%)';
-    document.querySelectorAll('.hl-dot').forEach(function(d,i){ d.classList.toggle('active', i===hlCurrent); });
+    // Noop - content merged into banner slider
 }
 
 // ========================
