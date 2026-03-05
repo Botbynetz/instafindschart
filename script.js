@@ -89,8 +89,12 @@ async function loadProducts() {
         var catResult = await window.supabase.from('categories').select('id, name');
         if (catResult.data) {
             catResult.data.forEach(function(cat) {
+                // Store dengan berbagai format key agar pasti match
                 categoryNameMap[String(cat.id)] = cat.name;
+                categoryNameMap[cat.id] = cat.name;
+                if (cat.name) categoryNameMap[cat.name.toLowerCase()] = cat.name;
             });
+            console.log('📂 Categories loaded:', JSON.stringify(categoryNameMap));
         }
     } catch(e) {}
 
@@ -749,12 +753,16 @@ function buildFilterCategoryList(products) {
     products.forEach(function(p) {
         var rawKey = String(p.category || '').trim();
         if (!rawKey) return;
-        // Resolve nama: cek map dulu, fallback ke nilai asli
-        var resolvedName = categoryNameMap[rawKey] || categoryNameMap[rawKey.toLowerCase()] || p.category;
-        var displayKey = rawKey; // gunakan raw key untuk filter matching
+        // Resolve nama: cek semua kemungkinan key
+        var resolvedName = categoryNameMap[rawKey]
+            || categoryNameMap[parseInt(rawKey)]
+            || categoryNameMap[rawKey.toLowerCase()]
+            || rawKey;
+        var displayKey = rawKey;
         if (!catMap[displayKey]) catMap[displayKey] = { name: resolvedName, count: 0, key: displayKey };
         catMap[displayKey].count++;
     });
+    console.log('🗂️ Category map built:', JSON.stringify(Object.keys(catMap)));
 
     var cats = Object.values(catMap);
     list.innerHTML = '<button class="filter-option active" data-cat="all" onclick="applyFilterCategory(&quot;all&quot;,&quot;Semua&quot;)"><i class="fas fa-th"></i> Semua Kategori</button>' +
