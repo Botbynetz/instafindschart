@@ -457,56 +457,66 @@ var hlSlides = [];
 async function loadHighlightCards(products) {
     hlSlides = [];
 
-    // Slide 1: Terpopuler
     if (products.length > 0) {
-        var popular = products.slice().sort(function(a,b){ return (b.clicks||0)-(a.clicks||0); })[0];
-        if (popular) {
+        // Top 3 paling banyak diklik
+        var byClicks = products.slice().sort(function(a,b){ return (b.clicks||0)-(a.clicks||0); });
+        var topPopular = byClicks.slice(0, Math.min(3, products.length));
+
+        // Top 3 paling baru diupload
+        var byDate = products.slice().sort(function(a,b){ return new Date(b.createdat||0)-new Date(a.createdat||0); });
+        var topNew = byDate.slice(0, Math.min(3, products.length));
+
+        // Kumpulkan ID produk popular agar tidak duplikat di slide baru
+        var popularIds = topPopular.map(function(p){ return p.id; });
+
+        // Slide: Top 3 Terpopuler
+        topPopular.forEach(function(p, i) {
+            var labels = ['🔥 Terpopuler', '🔥 #2 Terpopuler', '🔥 #3 Terpopuler'];
             hlSlides.push({
-                badge: '🔥 Terpopuler',
+                badge: labels[i] || '🔥 Terpopuler',
                 badgeColor: '#ff6b35',
-                image: popular.image || '',
-                title: popular.name,
-                sub: (popular.clicks||0) > 0 ? '👆 '+(popular.clicks||0)+' klik' : '⭐ Produk Unggulan',
+                image: p.image || '',
+                title: p.name,
+                sub: (p.clicks||0) > 0 ? '👆 '+(p.clicks||0)+' klik' : '⭐ Produk Unggulan',
                 btnText: 'Lihat Produk',
                 btnColor: '#ff6b35',
-                action: function(p){ return function(){ trackAndRedirect(p.affiliatelink, p.id); }; }(popular)
+                action: function(prod){ return function(){ trackAndRedirect(prod.affiliatelink, prod.id); }; }(p)
             });
-        }
-    }
+        });
 
-    // Slide 2: Produk Terbaru
-    if (products.length > 0) {
-        var newest = products.slice().sort(function(a,b){ return new Date(b.createdat||0)-new Date(a.createdat||0); })[0];
-        if (newest) {
-            var tgl = newest.createdat ? new Date(newest.createdat).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}) : '';
+        // Slide: Top 3 Terbaru (skip kalau sudah ada di popular)
+        topNew.forEach(function(p, i) {
+            if (popularIds.indexOf(p.id) !== -1) return; // skip duplikat
+            var tgl = p.createdat ? new Date(p.createdat).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}) : '';
+            var labels = ['🆕 Baru Masuk', '🆕 Produk Baru', '🆕 Baru Ditambahkan'];
             hlSlides.push({
-                badge: '🆕 Produk Baru',
+                badge: labels[i] || '🆕 Baru',
                 badgeColor: '#11998e',
-                image: newest.image || '',
-                title: newest.name,
-                sub: '📆 Ditambahkan '+tgl,
+                image: p.image || '',
+                title: p.name,
+                sub: tgl ? '📆 '+tgl : '🛍️ Produk terbaru',
                 btnText: 'Lihat Produk',
                 btnColor: '#11998e',
-                action: function(p){ return function(){ trackAndRedirect(p.affiliatelink, p.id); }; }(newest)
+                action: function(prod){ return function(){ trackAndRedirect(prod.affiliatelink, prod.id); }; }(p)
             });
-        }
+        });
     }
 
-    // Slide 3+: Events aktif
+    // Slide Event aktif dari Supabase
     try {
         if (window.supabase) {
             var evResult = await window.supabase.from('events').select('*').eq('active',true).order('createdat',{ascending:false});
             if (evResult.data) {
                 evResult.data.forEach(function(ev) {
                     hlSlides.push({
-                        badge: ev.label || '📅 Event',
+                        badge: '📅 Event',
                         badgeColor: '#667eea',
                         image: ev.image || '',
                         title: ev.title,
                         sub: ev.description || '',
-                        btnText: ev.buttontext || 'Lihat Sekarang',
+                        btnText: ev.link ? (ev.buttontext || 'Lihat Sekarang') : '',
                         btnColor: '#667eea',
-                        action: function(link){ return function(){ window.open(link,'_blank'); }; }(ev.link||'#')
+                        action: ev.link ? (function(link){ return function(){ window.open(link,'_blank'); }; }(ev.link)) : function(){}
                     });
                 });
             }
@@ -533,7 +543,7 @@ function renderHighlightSlideshow() {
             '<div class="hl-slide-info">' +
                 '<div class="hl-slide-title">'+s.title+'</div>' +
                 '<div class="hl-slide-sub">'+s.sub+'</div>' +
-                '<button class="hl-slide-btn" style="background:'+s.btnColor+'" data-idx="'+i+'">'+s.btnText+'</button>' +
+                (s.btnText ? '<button class="hl-slide-btn" style="background:'+s.btnColor+'" data-idx="'+i+'">'+s.btnText+'</button>' : '') +
             '</div>' +
         '</div>';
     }).join('');
