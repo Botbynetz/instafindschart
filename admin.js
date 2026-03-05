@@ -324,7 +324,7 @@ var IMGBB_KEY = 'cc40cdc3967a9e03f1a0a190479f5f21';
 // TELEGRAM CONFIG
 // ========================
 var TELEGRAM_BOT_TOKEN = '8616409431:AAFu4tJEnwqB9Rsh9h-6miUz4qDsLMdFOzo';
-var TELEGRAM_CHANNEL_ID = '-1007852153730';
+var TELEGRAM_CHANNEL_ID = '-1003853666549';
 
 function setupImageUpload() {
     var dragDropZone = document.getElementById('drag-drop-zone');
