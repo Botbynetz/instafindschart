@@ -293,7 +293,7 @@ async function loadHighlightCards(products) {
             return (b.clicks || 0) - (a.clicks || 0);
         })[0];
 
-        if (popular && (popular.clicks || 0) > 0) {
+        if (popular) {
             var cardPopular = document.getElementById('card-popular');
             var popularImg = document.getElementById('popular-img');
             var popularName = document.getElementById('popular-name');
@@ -302,7 +302,8 @@ async function loadHighlightCards(products) {
 
             if (popularImg) popularImg.src = popular.image || '';
             if (popularName) popularName.textContent = popular.name || '';
-            if (popularClicks) popularClicks.textContent = '👆 ' + (popular.clicks || 0) + ' klik';
+            var clkCount = popular.clicks || 0;
+            if (popularClicks) popularClicks.textContent = clkCount > 0 ? ('👆 ' + clkCount + ' klik') : '🆕 Produk unggulan';
             if (popularBtn) popularBtn.onclick = function() { trackAndRedirect(popular.affiliatelink, popular.id); };
             if (cardPopular) cardPopular.style.display = 'flex';
         }
