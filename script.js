@@ -115,9 +115,13 @@ function renderProducts(products) {
     allProducts = products;
     productsGrid.innerHTML = '';
 
+    // Build filter kategori dari produk yang ada
+    buildCategoryFilters(products);
+
     products.forEach(function(product, index) {
         var productCard = document.createElement('div');
         productCard.className = 'product-card';
+        productCard.dataset.category = String(product.category || '');
         productCard.style.animation = 'fadeInUp 0.6s ease backwards';
         productCard.style.animationDelay = (index * 0.05) + 's';
 
@@ -274,6 +278,114 @@ async function trackAndRedirect(link, productId) {
         console.error('❌ Error tracking click:', err);
     }
     return false;
+}
+
+// ========================
+// CATEGORY FILTER
+// ========================
+var activeCategory = 'all';
+
+// Icon map untuk kategori
+var CATEGORY_ICONS = {
+    '1': 'fas fa-lipstick',
+    '2': 'fas fa-shirt',
+    '3': 'fas fa-shoe-prints',
+    '4': 'fas fa-ring',
+    '5': 'fas fa-phone',
+    '6': 'fas fa-home',
+    'kecantikan': 'fas fa-lipstick',
+    'fashion': 'fas fa-shirt',
+    'sepatu': 'fas fa-shoe-prints',
+    'aksesoris': 'fas fa-ring',
+    'elektronik': 'fas fa-phone',
+    'rumah tangga': 'fas fa-home'
+};
+
+// Nama kategori dari ID
+var CATEGORY_NAMES = {
+    '1': 'Kecantikan',
+    '2': 'Fashion',
+    '3': 'Sepatu',
+    '4': 'Aksesoris',
+    '5': 'Elektronik',
+    '6': 'Rumah Tangga'
+};
+
+function buildCategoryFilters(products) {
+    var filterBar = document.getElementById('category-filter-bar');
+    if (!filterBar) return;
+
+    // Kumpulkan kategori unik dari produk
+    var categoryMap = {};
+    products.forEach(function(p) {
+        if (p.category) {
+            var key = String(p.category);
+            if (!categoryMap[key]) {
+                categoryMap[key] = {
+                    id: key,
+                    count: 0,
+                    name: CATEGORY_NAMES[key] || p.category,
+                    icon: CATEGORY_ICONS[key] || CATEGORY_ICONS[String(p.category).toLowerCase()] || 'fas fa-tag'
+                };
+            }
+            categoryMap[key].count++;
+        }
+    });
+
+    var categories = Object.values(categoryMap);
+
+    // Reset filter bar
+    var allActive = activeCategory === 'all' ? ' active' : '';
+    filterBar.innerHTML = '<button class="filter-btn' + allActive + '" data-category="all" onclick="filterByCategory(&quot;all&quot;)">' +
+        '<i class="fas fa-th"></i> Semua <span class="filter-count">' + products.length + '</span>' +
+        '</button>';
+
+    categories.forEach(function(cat) {
+        var catActive = activeCategory === cat.id ? ' active' : '';
+        filterBar.innerHTML += '<button class="filter-btn' + catActive + '" data-category="' + cat.id + '" onclick="filterByCategory(&quot;' + cat.id + '&quot;)">' +
+            '<i class="' + cat.icon + '"></i> ' + cat.name + ' <span class="filter-count">' + cat.count + '</span>' +
+            '</button>';
+    });
+
+    // Sembunyikan filter bar kalau hanya 1 kategori atau kosong
+    filterBar.style.display = categories.length > 0 ? 'flex' : 'none';
+}
+
+function filterByCategory(categoryId) {
+    activeCategory = categoryId;
+
+    // Update active state tombol
+    document.querySelectorAll('.filter-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.category === categoryId);
+    });
+
+    // Filter produk
+    var productsGrid = document.querySelector('.products-grid');
+    if (!productsGrid) return;
+
+    var productCards = productsGrid.querySelectorAll('.product-card');
+    var visibleCount = 0;
+
+    productCards.forEach(function(card) {
+        var cardCategory = card.dataset.category || '';
+        var isVisible = categoryId === 'all' || cardCategory === categoryId;
+        card.style.display = isVisible ? '' : 'none';
+        if (isVisible) visibleCount++;
+    });
+
+    // Pesan kosong
+    var noMsg = productsGrid.querySelector('.no-filter-message');
+    if (visibleCount === 0) {
+        if (!noMsg) {
+            noMsg = document.createElement('div');
+            noMsg.className = 'no-filter-message';
+            noMsg.style.cssText = 'grid-column:1/-1;text-align:center;padding:50px;color:#999;font-size:16px;';
+            productsGrid.appendChild(noMsg);
+        }
+        noMsg.textContent = 'Belum ada produk di kategori ini.';
+    } else if (noMsg) {
+        noMsg.remove();
+    }
 }
 
 // ========================
