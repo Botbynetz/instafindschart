@@ -320,6 +320,12 @@ function editProduct(productId) {
 var uploadedImages = []; // array of URLs
 var IMGBB_KEY = 'cc40cdc3967a9e03f1a0a190479f5f21';
 
+// ========================
+// TELEGRAM CONFIG
+// ========================
+var TELEGRAM_BOT_TOKEN = '8616409431:AAFu4tJEnwqB9Rsh9h-6miUz4qDsLMdFOzo';
+var TELEGRAM_CHANNEL_ID = '-1007852153730';
+
 function setupImageUpload() {
     var dragDropZone = document.getElementById('drag-drop-zone');
     var fileInput = document.getElementById('product-image-file');
@@ -736,6 +742,20 @@ async function handleProductSubmit(e) {
         closeModal('product-modal');
         renderProducts();
         showNotification('✅ Produk berhasil ' + (isEditing ? 'diperbarui' : 'ditambahkan') + '!', 'success');
+
+        // Auto post ke Telegram
+        var savedProduct = {
+            name: name,
+            image: image,
+            originalprice: originalprice,
+            price: price,
+            discount: discount,
+            description: description,
+            affiliatelink: affiliateLink,
+            platforms: platforms
+        };
+        postToTelegram(savedProduct, isEditing);
+
         editingProductId = null;
 
     } catch (err) {
@@ -892,6 +912,75 @@ async function resetAllData() {
             showNotification('❌ Gagal reset: ' + err.message, 'error');
         }
     });
+}
+
+// ========================
+// TELEGRAM AUTO-POST
+// ========================
+async function postToTelegram(product, isEdit) {
+    isEdit = isEdit || false;
+    try {
+        var action = isEdit ? '✏️ Produk Diperbarui' : '🆕 Produk Baru';
+        var priceText = '';
+        if (product.discount && product.discount > 0) {
+            priceText = '💰 Harga: ~~Rp ' + (product.originalprice || 0).toLocaleString('id-ID') + '~~ → *Rp ' + (product.price || 0).toLocaleString('id-ID') + '* (Diskon ' + product.discount + '%)';
+        } else {
+            priceText = '💰 Harga: *Rp ' + (product.price || 0).toLocaleString('id-ID') + '*';
+        }
+
+        var platformText = (product.platforms && product.platforms.length > 0)
+            ? '🛒 Platform: ' + product.platforms.join(', ')
+            : '';
+
+        var desc150 = product.description ? ('\u{1F4DD} ' + product.description.substring(0, 150) + (product.description.length > 150 ? '...' : '') + '\n') : '';
+        var caption = action + ' di Instafinds.id!\n\n' +
+            '\u{1F4E6} *' + product.name + '*\n\n' +
+            priceText + '\n' +
+            (platformText ? platformText + '\n' : '') +
+            desc150 +
+            '\n\u{1F517} [Beli Sekarang](' + product.affiliatelink + ')' +
+            '\n\n\u{1F310} Lihat semua produk: https://botbynetz.github.io/instafindschart/';
+
+        var imageUrl = product.image || '';
+        var apiBase = 'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN;
+
+        var response;
+        if (imageUrl) {
+            // Kirim dengan foto
+            response = await fetch(apiBase + '/sendPhoto', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: TELEGRAM_CHANNEL_ID,
+                    photo: imageUrl,
+                    caption: caption,
+                    parse_mode: 'Markdown'
+                })
+            });
+        } else {
+            // Kirim teks saja
+            response = await fetch(apiBase + '/sendMessage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: TELEGRAM_CHANNEL_ID,
+                    text: caption,
+                    parse_mode: 'Markdown',
+                    disable_web_page_preview: false
+                })
+            });
+        }
+
+        var result = await response.json();
+        if (result.ok) {
+            console.log('✅ Posted to Telegram!');
+            showNotification('📢 Produk berhasil dibagikan ke Telegram!', 'success');
+        } else {
+            console.error('❌ Telegram error:', result.description);
+        }
+    } catch (err) {
+        console.error('❌ Gagal post ke Telegram:', err);
+    }
 }
 
 // ========================
