@@ -48,18 +48,59 @@
                 </div>
             </div>
             
+            <!-- Banner Slider -->
+            <div class="banner-slider" id="banner-slider">
+                <div class="banner-track" id="banner-track">
+                    <!-- Banner diisi otomatis dari JS (events) + default banners -->
+                </div>
+                <button class="banner-nav banner-prev" id="banner-prev"><i class="fas fa-chevron-left"></i></button>
+                <button class="banner-nav banner-next" id="banner-next"><i class="fas fa-chevron-right"></i></button>
+                <div class="banner-dots" id="banner-dots"></div>
+            </div>
+
+            <!-- Highlight Cards: Terpopuler & Produk Baru -->
+            <div class="highlight-cards" id="highlight-cards">
+                <div class="highlight-card highlight-popular" id="card-popular" style="display:none;">
+                    <div class="highlight-card-badge">🔥 Terpopuler</div>
+                    <div class="highlight-card-img-wrap"><img id="popular-img" src="" alt=""></div>
+                    <div class="highlight-card-info">
+                        <div class="highlight-card-label">Produk Terpopuler</div>
+                        <div class="highlight-card-name" id="popular-name"></div>
+                        <div class="highlight-card-clicks" id="popular-clicks"></div>
+                        <button class="highlight-card-btn" id="popular-btn">Lihat Produk</button>
+                    </div>
+                </div>
+                <div class="highlight-card highlight-new" id="card-new" style="display:none;">
+                    <div class="highlight-card-badge">🆕 Baru</div>
+                    <div class="highlight-card-img-wrap"><img id="new-img" src="" alt=""></div>
+                    <div class="highlight-card-info">
+                        <div class="highlight-card-label">Produk Terbaru</div>
+                        <div class="highlight-card-name" id="new-name"></div>
+                        <div class="highlight-card-date" id="new-date"></div>
+                        <button class="highlight-card-btn" id="new-btn">Lihat Produk</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kategori Grid (Shopee style) -->
+            <div class="category-section">
+                <div class="category-section-title">🗂️ Kategori</div>
+                <div class="category-grid" id="category-grid">
+                    <!-- Diisi otomatis dari JS -->
+                </div>
+            </div>
+
             <!-- Search Bar -->
             <div class="search-bar-simple">
                 <i class="fas fa-search"></i>
                 <input type="text" id="productSearch" placeholder="Cari produk...">
             </div>
 
-            <!-- Filter Kategori -->
+            <!-- Filter Pills -->
             <div class="category-filter-bar" id="category-filter-bar">
                 <button class="filter-btn active" data-category="all">
                     <i class="fas fa-th"></i> Semua
                 </button>
-                <!-- Tombol kategori akan diisi otomatis dari JS -->
             </div>
 
             <!-- Products Grid -->
