@@ -301,6 +301,16 @@ function editProduct(productId) {
     document.getElementById('product-rating').value = product.rating || '';
     document.getElementById('product-reviews').value = product.reviews || '';
     document.getElementById('product-description').value = product.description || '';
+    if (document.getElementById('product-video')) {
+        document.getElementById('product-video').value = product.video || '';
+        // Trigger preview if video exists
+        if (product.video) {
+            document.getElementById('product-video').dispatchEvent(new Event('input'));
+        } else {
+            var wrap = document.getElementById('video-preview-wrap');
+            if (wrap) wrap.style.display = 'none';
+        }
+    }
     document.getElementById('product-affiliate-link').value = product.affiliatelink || '';
 
     document.querySelectorAll('input[name="platform"]').forEach(function(cb) {
@@ -709,6 +719,7 @@ async function handleProductSubmit(e) {
     var rating = parseFloat(document.getElementById('product-rating').value) || 4.5;
     var reviews = parseInt(document.getElementById('product-reviews').value) || 0;
     var description = document.getElementById('product-description').value || 'Produk pilihan berkualitas';
+    var videoUrl = document.getElementById('product-video') ? document.getElementById('product-video').value.trim() : '';
     var isEditing = editingProductId !== null;
 
     var submitBtn = document.querySelector('#product-form button[type="submit"]');
@@ -731,6 +742,7 @@ async function handleProductSubmit(e) {
                     rating: rating,
                     reviews: reviews,
                     description: description,
+                    video: videoUrl,
                     affiliatelink: affiliateLink,
                     platforms: platforms,
                     updatedat: new Date().toISOString()
@@ -751,6 +763,7 @@ async function handleProductSubmit(e) {
                     rating: rating,
                     reviews: reviews,
                     description: description,
+                    video: videoUrl,
                     affiliatelink: affiliateLink,
                     platforms: platforms,
                     clicks: 0,
@@ -1218,6 +1231,65 @@ async function deleteEvent(id) {
     loadEvents();
     showNotification('✅ Event dihapus!', 'success');
 }
+
+// ========================
+// VIDEO URL PARSER
+// ========================
+function parseVideoUrl(url) {
+    if (!url) return null;
+    url = url.trim();
+
+    // YouTube: watch, shorts, youtu.be
+    var ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) {
+        return {
+            type: 'youtube',
+            id: ytMatch[1],
+            embed: 'https://www.youtube.com/embed/' + ytMatch[1] + '?rel=0&modestbranding=1',
+            thumb: 'https://img.youtube.com/vi/' + ytMatch[1] + '/hqdefault.jpg'
+        };
+    }
+
+    // TikTok
+    var ttMatch = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/);
+    if (ttMatch) {
+        return {
+            type: 'tiktok',
+            id: ttMatch[1],
+            embed: 'https://www.tiktok.com/embed/v2/' + ttMatch[1],
+            thumb: ''
+        };
+    }
+
+    return null;
+}
+
+// Live preview saat admin paste URL
+document.addEventListener('DOMContentLoaded', function() {
+    var videoInput = document.getElementById('product-video');
+    if (!videoInput) return;
+    videoInput.addEventListener('input', function() {
+        var parsed = parseVideoUrl(this.value);
+        var wrap = document.getElementById('video-preview-wrap');
+        var frame = document.getElementById('video-preview-frame');
+        var hint = document.getElementById('video-hint');
+        if (parsed) {
+            if (frame) frame.src = parsed.embed;
+            if (wrap) wrap.style.display = 'block';
+            if (hint) {
+                hint.textContent = '✅ ' + (parsed.type === 'youtube' ? 'YouTube' : 'TikTok') + ' terdeteksi';
+                hint.style.color = '#4CAF50';
+            }
+        } else {
+            if (wrap) wrap.style.display = 'none';
+            if (frame) frame.src = '';
+            if (hint) {
+                hint.textContent = this.value ? '⚠️ URL tidak dikenali. Pastikan URL YouTube atau TikTok yang valid.' : '';
+                hint.style.color = '#ff9800';
+            }
+        }
+    });
+});
 
 // ========================
 // MODALS
