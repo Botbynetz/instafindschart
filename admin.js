@@ -1236,32 +1236,32 @@ async function deleteEvent(id) {
 // VIDEO URL PARSER
 // ========================
 function parseVideoUrl(url) {
-    if (!url) return null;
+    if (!url || !url.trim()) return null;
     url = url.trim();
 
-    // YouTube: watch, shorts, youtu.be
+    // YouTube
     var ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
-    if (ytMatch) {
-        return {
-            type: 'youtube',
-            id: ytMatch[1],
-            embed: 'https://www.youtube.com/embed/' + ytMatch[1] + '?rel=0&modestbranding=1',
-            thumb: 'https://img.youtube.com/vi/' + ytMatch[1] + '/hqdefault.jpg'
-        };
-    }
+    if (ytMatch) return {
+        type: 'youtube',
+        embed: 'https://www.youtube.com/embed/' + ytMatch[1] + '?rel=0',
+        thumb: 'https://img.youtube.com/vi/' + ytMatch[1] + '/hqdefault.jpg'
+    };
 
     // TikTok
     var ttMatch = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/);
-    if (ttMatch) {
-        return {
-            type: 'tiktok',
-            id: ttMatch[1],
-            embed: 'https://www.tiktok.com/embed/v2/' + ttMatch[1],
-            thumb: ''
-        };
+    if (ttMatch) return {
+        type: 'tiktok',
+        embed: 'https://www.tiktok.com/embed/v2/' + ttMatch[1],
+        thumb: ''
+    };
+
+    // Direct video file
+    if (url.match(/\.(mp4|webm|mov|m4v|ogg)(\?.*)?$/i)) {
+        return { type: 'direct', embed: url, thumb: '' };
     }
 
-    return null;
+    // URL lainnya (Shopee, marketplace, CDN, dll)
+    return { type: 'external', embed: url, thumb: '' };
 }
 
 // Live preview saat admin paste URL
@@ -1274,17 +1274,22 @@ document.addEventListener('DOMContentLoaded', function() {
         var frame = document.getElementById('video-preview-frame');
         var hint = document.getElementById('video-hint');
         if (parsed) {
-            if (frame) frame.src = parsed.embed;
-            if (wrap) wrap.style.display = 'block';
+            var typeLabels = { youtube: '▶ YouTube', tiktok: '♪ TikTok', direct: '🎬 Video Langsung', external: '🔗 URL Video' };
+            if (parsed.type === 'direct') {
+                wrap.style.display = 'block';
+                wrap.innerHTML = '<video src="' + parsed.embed + '" controls style="width:100%;max-height:150px;border-radius:8px;"></video>';
+            } else {
+                wrap.innerHTML = '<iframe id="video-preview-frame" src="' + parsed.embed + '" frameborder="0" allowfullscreen style="width:100%;height:100%;"></iframe>';
+                wrap.style.display = 'block';
+            }
             if (hint) {
-                hint.textContent = '✅ ' + (parsed.type === 'youtube' ? 'YouTube' : 'TikTok') + ' terdeteksi';
+                hint.textContent = '✅ ' + (typeLabels[parsed.type] || 'Video') + ' terdeteksi';
                 hint.style.color = '#4CAF50';
             }
         } else {
             if (wrap) wrap.style.display = 'none';
-            if (frame) frame.src = '';
             if (hint) {
-                hint.textContent = this.value ? '⚠️ URL tidak dikenali. Pastikan URL YouTube atau TikTok yang valid.' : '';
+                hint.textContent = this.value ? '⚠️ Masukkan URL video yang valid' : '';
                 hint.style.color = '#ff9800';
             }
         }
