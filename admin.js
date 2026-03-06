@@ -331,6 +331,11 @@ function editProduct(productId) {
     document.getElementById('product-rating').value = product.rating || '';
     document.getElementById('product-reviews').value = product.reviews || '';
     document.getElementById('product-description').value = product.description || '';
+    if (document.getElementById('product-tags')) {
+        var tagsVal = product.tags && Array.isArray(product.tags) ? product.tags.join(', ') : (product.tags || '');
+        document.getElementById('product-tags').value = tagsVal;
+        updateTagsPreview(tagsVal);
+    }
     if (document.getElementById('product-video')) {
         document.getElementById('product-video').value = product.video || '';
         // Trigger preview if video exists
@@ -750,6 +755,8 @@ async function handleProductSubmit(e) {
     var reviews = parseInt(document.getElementById('product-reviews').value) || 0;
     var description = document.getElementById('product-description').value || 'Produk pilihan berkualitas';
     var videoUrl = document.getElementById('product-video') ? document.getElementById('product-video').value.trim() : '';
+    var tagsRaw = document.getElementById('product-tags') ? document.getElementById('product-tags').value.trim() : '';
+    var tagsArray = tagsRaw ? tagsRaw.split(',').map(function(t){ return t.trim(); }).filter(Boolean) : [];
     var isEditing = editingProductId !== null;
 
     var submitBtn = document.querySelector('#product-form button[type="submit"]');
@@ -773,6 +780,7 @@ async function handleProductSubmit(e) {
                     reviews: reviews,
                     description: description,
                     video: videoUrl,
+                    tags: tagsArray,
                     affiliatelink: affiliateLink,
                     platforms: platforms,
                     updatedat: new Date().toISOString()
@@ -794,6 +802,7 @@ async function handleProductSubmit(e) {
                     reviews: reviews,
                     description: description,
                     video: videoUrl,
+                    tags: tagsArray,
                     affiliatelink: affiliateLink,
                     platforms: platforms,
                     clicks: 0,
@@ -1404,6 +1413,26 @@ async function deleteEvent(id) {
     loadEvents();
     showNotification('✅ Event dihapus!', 'success');
 }
+
+
+// ========================
+// TAGS PREVIEW
+// ========================
+function updateTagsPreview(val) {
+    var preview = document.getElementById('tags-preview');
+    if (!preview) return;
+    var tags = val ? val.split(',').map(function(t){ return t.trim(); }).filter(Boolean) : [];
+    var colors = { 'Bestseller':'#ff6b35','New':'#11998e','Sale':'#e53935','Hot':'#f5576c','Limited':'#764ba2','Free Ongkir':'#4facfe' };
+    preview.innerHTML = tags.map(function(t) {
+        var c = colors[t] || '#667eea';
+        return '<span style="background:' + c + '20;color:' + c + ';padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;">' + t + '</span>';
+    }).join('');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var tagsInput = document.getElementById('product-tags');
+    if (tagsInput) tagsInput.addEventListener('input', function() { updateTagsPreview(this.value); });
+});
 
 // ========================
 // VIDEO URL PARSER
