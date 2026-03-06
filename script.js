@@ -25,17 +25,18 @@ function openAdminModal() {
     var passwordInput = document.getElementById('admin-password-input');
     var errorDiv = document.getElementById('password-error');
     if (modal) {
-        modal.classList.add('show');
-        if (usernameInput) usernameInput.value = '';
-        if (passwordInput) passwordInput.value = '';
+        modal.style.display = 'flex';
+        if (usernameInput) { usernameInput.value = ''; }
+        if (passwordInput) { passwordInput.value = ''; }
         if (errorDiv) errorDiv.style.display = 'none';
-        if (usernameInput) usernameInput.focus();
+        // Focus dengan delay agar tidak trigger address bar
+        setTimeout(function() { if (usernameInput) usernameInput.focus(); }, 100);
     }
 }
 
 function closeAdminModal() {
     var modal = document.getElementById('admin-password-modal');
-    if (modal) modal.classList.remove('show');
+    if (modal) modal.style.display = 'none';
 }
 
 function handleAdminLogin(event) {
