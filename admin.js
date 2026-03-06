@@ -186,6 +186,7 @@ var PAGE_TITLES = {
     products: 'Kelola Produk',
     categories: 'Kategori',
     events: 'Event',
+    analytics: '📊 Analytics',
     settings: 'Setelan'
 };
 
@@ -218,6 +219,7 @@ function navigateToPage(pageName) {
     else if (pageName === 'products') renderProducts();
     else if (pageName === 'categories') renderCategories();
     else if (pageName === 'events') loadEvents();
+    else if (pageName === 'analytics') renderAnalytics();
 }
 
 // ========================
@@ -973,6 +975,144 @@ async function handleCategorySubmit(e) {
         showNotification('✅ Kategori berhasil disimpan!', 'success');
     } catch(err) {
         showNotification('❌ Gagal simpan kategori: ' + err.message, 'error');
+    }
+}
+
+
+// ========================
+// ANALYTICS
+// ========================
+var analyticsPeriod = 7;
+var categoryChartInstance = null;
+
+function setAnalyticsPeriod(days, btn) {
+    analyticsPeriod = days;
+    document.querySelectorAll('.period-btn').forEach(function(b) { b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    renderAnalytics();
+}
+
+async function renderAnalytics() {
+    // Stat cards
+    var totalClicks = products.reduce(function(s,p) { return s+(p.clicks||0); }, 0);
+    var totalProducts = products.length;
+
+    // New products this month
+    var now = new Date();
+    var startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    var newThisMonth = products.filter(function(p) {
+        return p.createdat && new Date(p.createdat) >= startOfMonth;
+    }).length;
+
+    document.getElementById('an-total-clicks').textContent = totalClicks.toLocaleString('id-ID');
+    document.getElementById('an-total-products').textContent = totalProducts;
+    document.getElementById('an-new-products').textContent = newThisMonth;
+
+    // Wishlist count from Supabase
+    try {
+        var wlResult = await window.supabase.from('wishlists').select('id', { count: 'exact', head: true });
+        document.getElementById('an-total-wishlist').textContent = (wlResult.count || 0).toLocaleString('id-ID');
+    } catch(e) {
+        document.getElementById('an-total-wishlist').textContent = '-';
+    }
+
+    // Top 10 products by clicks
+    var topProducts = products.slice()
+        .sort(function(a,b) { return (b.clicks||0)-(a.clicks||0); })
+        .slice(0, 10);
+
+    var maxClicks = topProducts.length > 0 ? (topProducts[0].clicks || 1) : 1;
+
+    document.getElementById('an-top-products-list').innerHTML = topProducts.length > 0
+        ? topProducts.map(function(p, i) {
+            var pct = Math.round(((p.clicks||0) / maxClicks) * 100);
+            var medals = ['🥇','🥈','🥉'];
+            return '<div class="an-product-row">' +
+                '<span class="an-rank">' + (medals[i] || (i+1)) + '</span>' +
+                '<img src="' + (p.image||'') + '" class="an-thumb">' +
+                '<div class="an-product-info">' +
+                    '<div class="an-product-name">' + p.name + '</div>' +
+                    '<div class="an-bar-wrap"><div class="an-bar" style="width:' + pct + '%"></div></div>' +
+                '</div>' +
+                '<span class="an-clicks">' + (p.clicks||0) + ' klik</span>' +
+            '</div>';
+        }).join('')
+        : '<p style="color:#aaa;text-align:center;padding:20px;">Belum ada data klik</p>';
+
+    // Category chart
+    var catMap = {};
+    products.forEach(function(p) {
+        var catId = String(p.category || 'Lainnya');
+        var catName = categories.find(function(c) { return String(c.id) === catId; });
+        var label = catName ? catName.name : catId;
+        catMap[label] = (catMap[label] || 0) + (p.clicks || 0);
+    });
+
+    var catLabels = Object.keys(catMap);
+    var catData = Object.values(catMap);
+    var colors = ['#667eea','#f093fb','#f5576c','#4facfe','#43e97b','#fa709a','#fee140','#a18cd1','#fccb90','#a1c4fd'];
+
+    var ctx = document.getElementById('an-category-chart');
+    if (ctx) {
+        if (categoryChartInstance) categoryChartInstance.destroy();
+        categoryChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: catLabels,
+                datasets: [{
+                    data: catData,
+                    backgroundColor: colors.slice(0, catLabels.length),
+                    borderWidth: 0,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { size: 12 }, padding: 12, boxWidth: 12 }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    }
+
+    // Top wishlisted products
+    try {
+        var wlTop = await window.supabase
+            .from('wishlists')
+            .select('product_id')
+            .limit(500);
+
+        if (wlTop.data) {
+            var wlCount = {};
+            wlTop.data.forEach(function(r) {
+                wlCount[r.product_id] = (wlCount[r.product_id] || 0) + 1;
+            });
+
+            var wlSorted = Object.entries(wlCount)
+                .sort(function(a,b) { return b[1]-a[1]; })
+                .slice(0, 5);
+
+            document.getElementById('an-top-wishlist-list').innerHTML = wlSorted.length > 0
+                ? wlSorted.map(function(entry, i) {
+                    var prod = products.find(function(p) { return String(p.id) === String(entry[0]); });
+                    if (!prod) return '';
+                    return '<div class="an-product-row">' +
+                        '<span class="an-rank">' + (i+1) + '</span>' +
+                        '<img src="' + (prod.image||'') + '" class="an-thumb">' +
+                        '<div class="an-product-info">' +
+                            '<div class="an-product-name">' + prod.name + '</div>' +
+                        '</div>' +
+                        '<span class="an-clicks" style="color:#e53935;">❤️ ' + entry[1] + '</span>' +
+                    '</div>';
+                }).join('')
+                : '<p style="color:#aaa;text-align:center;padding:20px;">Belum ada data wishlist</p>';
+        }
+    } catch(e) {
+        document.getElementById('an-top-wishlist-list').innerHTML = '<p style="color:#aaa;text-align:center;padding:20px;">-</p>';
     }
 }
 
