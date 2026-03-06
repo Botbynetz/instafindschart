@@ -186,8 +186,12 @@ function renderProducts(products) {
         var parsedVideo = parseVideoUrl(product.video);
         var videoOverlay = '';
         if (parsedVideo) {
-            videoOverlay = '<button class="product-video-btn" onclick="openVideoPopup(\'' + parsedVideo.embed + '\',event)" title="Tonton Video Produk">' +
-                '<i class="fab fa-' + (parsedVideo.type === 'youtube' ? 'youtube' : 'tiktok') + '"></i>' +
+            var vIcon = parsedVideo.type === 'youtube' ? 'fab fa-youtube' :
+                        parsedVideo.type === 'tiktok'  ? 'fab fa-tiktok'  :
+                        'fas fa-play-circle';
+            videoOverlay = '<button class="product-video-btn" onclick="openVideoPopup(\'' +
+                parsedVideo.embed + '\',\'' + parsedVideo.type + '\',event)" title="Tonton Video Produk">' +
+                '<i class="' + vIcon + '"></i>' +
                 '<span>Video</span>' +
             '</button>';
         }
@@ -934,7 +938,7 @@ console.log('✅ script.js loaded!');
 // ========================
 // VIDEO POPUP
 // ========================
-function openVideoPopup(embedUrl, e) {
+function openVideoPopup(videoUrl, videoType, e) {
     if (e) e.stopPropagation();
 
     var popup = document.getElementById('video-popup');
@@ -945,25 +949,54 @@ function openVideoPopup(embedUrl, e) {
             '<div class="vp-backdrop" onclick="closeVideoPopup()"></div>' +
             '<div class="vp-container">' +
                 '<button class="vp-close" onclick="closeVideoPopup()"><i class="fas fa-times"></i></button>' +
-                '<div class="vp-frame-wrap">' +
-                    '<iframe id="vp-iframe" src="" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>' +
-                '</div>' +
+                '<div class="vp-frame-wrap" id="vp-frame-wrap"></div>' +
             '</div>';
         document.body.appendChild(popup);
     }
 
-    var iframe = document.getElementById('vp-iframe');
-    // autoplay=1 for YouTube
-    var src = embedUrl.includes('youtube.com') ? embedUrl + '&autoplay=1' : embedUrl;
-    if (iframe) iframe.src = src;
+    var wrap = document.getElementById('vp-frame-wrap');
+    wrap.innerHTML = '';
+
+    if (videoType === 'direct') {
+        // Direct mp4/webm — pakai tag <video>
+        wrap.innerHTML =
+            '<video id="vp-video" src="' + videoUrl + '" controls autoplay playsinline ' +
+            'style="width:100%;height:100%;background:#000;"></video>';
+    } else if (videoType === 'youtube') {
+        wrap.innerHTML =
+            '<iframe id="vp-iframe" src="' + videoUrl + '&autoplay=1" frameborder="0" ' +
+            'allowfullscreen allow="autoplay; encrypted-media"></iframe>';
+    } else if (videoType === 'tiktok') {
+        wrap.innerHTML =
+            '<iframe id="vp-iframe" src="' + videoUrl + '" frameborder="0" ' +
+            'allowfullscreen allow="autoplay; encrypted-media"></iframe>';
+    } else {
+        // External URL (Shopee, CDN, dll) — coba iframe dulu
+        wrap.innerHTML =
+            '<iframe id="vp-iframe" src="' + videoUrl + '" frameborder="0" ' +
+            'allowfullscreen allow="autoplay; encrypted-media"></iframe>' +
+            '<div id="vp-fallback" style="display:none;flex-direction:column;align-items:center;justify-content:center;' +
+            'height:100%;color:white;gap:14px;padding:20px;text-align:center;">' +
+                '<i class="fas fa-play-circle" style="font-size:48px;opacity:0.7;"></i>' +
+                '<p style="font-size:14px;opacity:0.8;">Video tidak bisa ditampilkan di sini.</p>' +
+                '<a href="' + videoUrl + '" target="_blank" style="background:#667eea;color:white;padding:10px 24px;' +
+                'border-radius:20px;text-decoration:none;font-weight:700;font-size:14px;">' +
+                    '<i class="fas fa-external-link-alt"></i> Tonton di Platform Asli' +
+                '</a>' +
+            '</div>';
+    }
+
     popup.style.display = 'flex';
     document.body.style.overflow = 'hidden';
 }
 
 function closeVideoPopup() {
     var popup = document.getElementById('video-popup');
+    // Stop video/iframe
     var iframe = document.getElementById('vp-iframe');
-    if (iframe) iframe.src = ''; // stop video
+    var video = document.getElementById('vp-video');
+    if (iframe) iframe.src = '';
+    if (video) { video.pause(); video.src = ''; }
     if (popup) popup.style.display = 'none';
     document.body.style.overflow = '';
 }
@@ -972,13 +1005,25 @@ function closeVideoPopup() {
 // VIDEO PARSER
 // ========================
 function parseVideoUrl(url) {
-    if (!url) return null;
+    if (!url || !url.trim()) return null;
     url = url.trim();
+
+    // YouTube
     var ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
-    if (ytMatch) return { type:'youtube', embed:'https://www.youtube.com/embed/'+ytMatch[1]+'?rel=0&autoplay=0' };
+    if (ytMatch) return { type: 'youtube', embed: 'https://www.youtube.com/embed/' + ytMatch[1] + '?rel=0' };
+
+    // TikTok
     var ttMatch = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/);
-    if (ttMatch) return { type:'tiktok', embed:'https://www.tiktok.com/embed/v2/'+ttMatch[1] };
-    return null;
+    if (ttMatch) return { type: 'tiktok', embed: 'https://www.tiktok.com/embed/v2/' + ttMatch[1] };
+
+    // Direct video file (mp4, webm, mov, dll)
+    if (url.match(/\.(mp4|webm|mov|m4v|ogg)(\?.*)?$/i)) {
+        return { type: 'direct', embed: url };
+    }
+
+    // URL lainnya (Shopee, marketplace, CDN, dll) — coba direct embed
+    // Kalau bukan embed-able, fallback ke open new tab
+    return { type: 'external', embed: url };
 }
 
 // ========================
