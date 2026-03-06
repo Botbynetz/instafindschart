@@ -150,6 +150,12 @@ function renderProducts(products) {
     // Build filter dropdown category list
     buildFilterCategoryList(products);
 
+    // Build tag list
+    buildTagList(products);
+
+    // Init price slider range based on actual products
+    initPriceSlider(products);
+
     // Banner slider (events + produk terpopuler)
     initBannerSlider(products);
 
@@ -213,8 +219,18 @@ function renderProducts(products) {
         }
 
         var pid = product.id;
+        // Tag badge (tampilkan tag pertama kalau ada)
+        var tagBadge = '';
+        var tagColors = {'Bestseller':'#ff6b35','New':'#11998e','Sale':'#e53935','Hot':'#f5576c','Limited':'#764ba2','Free Ongkir':'#4facfe'};
+        if (product.tags && Array.isArray(product.tags) && product.tags.length > 0) {
+            var firstTag = product.tags[0];
+            var tagColor = tagColors[firstTag] || '#667eea';
+            tagBadge = '<span class="product-tag-badge" style="background:' + tagColor + ';">' + firstTag + '</span>';
+        }
+
         productCard.innerHTML =
             '<div class="product-image-carousel" style="position:relative;" onclick="openProductDetail(\'' + pid + '\')" style="cursor:pointer;">' +
+                tagBadge +
                 '<button class="wishlist-heart" data-id="' + pid + '" onclick="toggleWishlist(\'' + pid + '\',event)" title="Simpan ke Wishlist">' +
                     '<i class="' + (userWishlist.has(String(pid)) ? 'fas' : 'far') + ' fa-heart"></i>' +
                 '</button>' +
@@ -656,6 +672,29 @@ function filterByCategory(categoryId) {
 // ========================
 var activeFilter = 'default';
 var activeFilterCategory = 'all';
+var activeRating = 0;
+var activePriceMin = 0;
+var activePriceMax = Infinity;
+var activeTag = 'all';
+
+// ========================
+// FUZZY SEARCH
+// ========================
+function fuzzyMatch(str, query) {
+    if (!query) return true;
+    str = str.toLowerCase();
+    query = query.toLowerCase().trim();
+    // Exact includes check first
+    if (str.includes(query)) return true;
+    // Fuzzy: check if all chars of query appear in order in str
+    var si = 0, qi = 0;
+    while (si < str.length && qi < query.length) {
+        if (str[si] === query[qi]) qi++;
+        si++;
+    }
+    // Allow fuzzy only if query >= 3 chars (avoid false positives)
+    return qi === query.length && query.length >= 3;
+}
 
 function toggleFilterDropdown() {
     var dd = document.getElementById('search-filter-dropdown');
@@ -742,6 +781,10 @@ function applyAllFilters() {
         sorted.sort(function(a,b){ return new Date(b.createdat||0) - new Date(a.createdat||0); });
     } else if (activeFilter === 'oldest') {
         sorted.sort(function(a,b){ return new Date(a.createdat||0) - new Date(b.createdat||0); });
+    } else if (activeFilter === 'price_asc') {
+        sorted.sort(function(a,b){ return (a.price||0) - (b.price||0); });
+    } else if (activeFilter === 'price_desc') {
+        sorted.sort(function(a,b){ return (b.price||0) - (a.price||0); });
     }
 
     // Reorder cards in DOM
@@ -754,15 +797,26 @@ function applyAllFilters() {
         if (card) productsGrid.appendChild(card);
     });
 
-    // Apply visibility: search + category
+    // Apply visibility: fuzzy search + category + rating + price + tag
     var visible = 0;
     productsGrid.querySelectorAll('.product-card').forEach(function(card) {
-        var name = (card.querySelector('.product-name') ? card.querySelector('.product-name').textContent : '').toLowerCase();
+        var name = (card.querySelector('.product-name') ? card.querySelector('.product-name').textContent : '');
         var cat = String(card.dataset.category || '').toLowerCase().trim();
-        var matchSearch = !searchVal || name.includes(searchVal);
+        var pid = card.dataset.id;
+        var prod = allProducts.find(function(p) { return String(p.id) === String(pid); });
+        var rating = prod ? (prod.rating || 0) : 0;
+        var price = prod ? (prod.price || 0) : 0;
+        var tags = prod && prod.tags ? prod.tags : [];
+
+        var matchSearch = !searchVal || fuzzyMatch(name, searchVal);
         var matchCat = activeFilterCategory === 'all' || cat === activeFilterCategory;
-        card.style.display = (matchSearch && matchCat) ? '' : 'none';
-        if (matchSearch && matchCat) visible++;
+        var matchRating = activeRating === 0 || rating >= activeRating;
+        var matchPrice = price === 0 || (price >= activePriceMin && price <= activePriceMax);
+        var matchTag = activeTag === 'all' || (Array.isArray(tags) && tags.map(function(t){ return t.toLowerCase(); }).includes(activeTag.toLowerCase()));
+
+        var show = matchSearch && matchCat && matchRating && matchPrice && matchTag;
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
     });
 
     // Empty message
@@ -801,6 +855,200 @@ function buildFilterCategoryList(products) {
                 '<i class="fas fa-tag"></i> ' + cat.name + ' <span class="filter-opt-count">' + cat.count + '</span>' +
             '</button>';
         }).join('');
+}
+
+
+// ========================
+// RATING FILTER
+// ========================
+function applyRatingFilter(rating, btn) {
+    activeRating = parseFloat(rating);
+    document.querySelectorAll('.filter-option[data-rating]').forEach(function(b) {
+        b.classList.toggle('active', parseFloat(b.dataset.rating) === activeRating);
+    });
+    updateActiveChips();
+    applyAllFilters();
+    closeFilterDropdown();
+}
+
+// ========================
+// PRICE SLIDER
+// ========================
+function onPriceSlider() {
+    var minEl = document.getElementById('price-slider-min');
+    var maxEl = document.getElementById('price-slider-max');
+    if (!minEl || !maxEl) return;
+
+    var minVal = parseInt(minEl.value);
+    var maxVal = parseInt(maxEl.value);
+
+    // Prevent crossover
+    if (minVal > maxVal) {
+        minEl.value = maxVal;
+        minVal = maxVal;
+    }
+
+    activePriceMin = minVal;
+    activePriceMax = maxVal >= 10000000 ? Infinity : maxVal;
+
+    var minLabel = document.getElementById('price-min-label');
+    var maxLabel = document.getElementById('price-max-label');
+    if (minLabel) minLabel.textContent = 'Rp ' + minVal.toLocaleString('id-ID');
+    if (maxLabel) maxLabel.textContent = maxVal >= 10000000 ? 'Rp ∞' : 'Rp ' + maxVal.toLocaleString('id-ID');
+
+    // Update slider fill
+    var fill = document.getElementById('price-slider-fill');
+    var pct1 = (minVal / 10000000) * 100;
+    var pct2 = (maxVal / 10000000) * 100;
+    if (fill) { fill.style.left = pct1 + '%'; fill.style.width = (pct2 - pct1) + '%'; }
+
+    updateActiveChips();
+    applyAllFilters();
+}
+
+function initPriceSlider(products) {
+    // Set max based on actual product prices
+    var prices = products.map(function(p) { return p.price || 0; }).filter(Boolean);
+    if (prices.length === 0) return;
+    var maxPrice = Math.ceil(Math.max.apply(null, prices) / 100000) * 100000;
+    maxPrice = Math.max(maxPrice, 100000);
+
+    var minEl = document.getElementById('price-slider-min');
+    var maxEl = document.getElementById('price-slider-max');
+    if (minEl) { minEl.max = maxPrice; minEl.value = 0; }
+    if (maxEl) { maxEl.max = maxPrice; maxEl.value = maxPrice; }
+
+    var maxLabel = document.getElementById('price-max-label');
+    if (maxLabel) maxLabel.textContent = 'Rp ∞';
+
+    activePriceMin = 0;
+    activePriceMax = Infinity;
+}
+
+// ========================
+// TAG FILTER
+// ========================
+function applyTagFilter(tag, btn) {
+    activeTag = tag;
+    document.querySelectorAll('.tag-filter-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.tag === tag);
+    });
+    updateActiveChips();
+    applyAllFilters();
+    closeFilterDropdown();
+}
+
+function buildTagList(products) {
+    var list = document.getElementById('filter-tag-list');
+    if (!list) return;
+
+    var tagSet = new Set();
+    products.forEach(function(p) {
+        if (p.tags && Array.isArray(p.tags)) {
+            p.tags.forEach(function(t) { if (t) tagSet.add(t); });
+        }
+    });
+
+    if (tagSet.size === 0) {
+        list.parentElement.style.display = 'none';
+        return;
+    }
+
+    list.innerHTML = '<button class="tag-filter-btn active" data-tag="all" onclick="applyTagFilter(&quot;all&quot;,this)">Semua</button>' +
+        Array.from(tagSet).map(function(tag) {
+            var tagColors = {
+                'Bestseller': '#ff6b35', 'New': '#11998e', 'Sale': '#e53935',
+                'Hot': '#f5576c', 'Limited': '#764ba2', 'Free Ongkir': '#4facfe'
+            };
+            var color = tagColors[tag] || '#667eea';
+            return '<button class="tag-filter-btn" data-tag="' + tag + '" onclick="applyTagFilter(this.dataset.tag,this)" style="--tag-color:' + color + '">' + tag + '</button>';
+        }).join('');
+}
+
+// ========================
+// ACTIVE FILTER CHIPS
+// ========================
+function updateActiveChips() {
+    var wrap = document.getElementById('active-filter-chips');
+    if (!wrap) return;
+    var chips = [];
+
+    if (activeRating > 0) chips.push({ label: '⭐ ' + activeRating + '+', clear: function() { applyRatingFilter(0); } });
+    if (activePriceMin > 0 || activePriceMax < Infinity) {
+        var priceLabel = 'Rp ' + activePriceMin.toLocaleString('id-ID') + (activePriceMax < Infinity ? ' – Rp ' + activePriceMax.toLocaleString('id-ID') : '+');
+        chips.push({ label: priceLabel, clear: function() {
+            activePriceMin = 0; activePriceMax = Infinity;
+            var minEl = document.getElementById('price-slider-min');
+            var maxEl = document.getElementById('price-slider-max');
+            if (minEl) minEl.value = 0;
+            if (maxEl) maxEl.value = maxEl.max;
+            onPriceSlider();
+        }});
+    }
+    if (activeTag !== 'all') chips.push({ label: '🏷️ ' + activeTag, clear: function() { applyTagFilter('all'); } });
+
+    wrap.style.display = chips.length ? 'flex' : 'none';
+    wrap.innerHTML = chips.map(function(c, i) {
+        return '<span class="filter-chip" onclick="filterChipClear(' + i + ')">' + c.label + ' <i class="fas fa-times"></i></span>';
+    }).join('');
+    wrap._chips = chips;
+}
+
+function filterChipClear(i) {
+    var wrap = document.getElementById('active-filter-chips');
+    if (wrap && wrap._chips && wrap._chips[i]) wrap._chips[i].clear();
+}
+
+// ========================
+// RESET ALL FILTERS
+// ========================
+function resetAllFilters() {
+    activeFilter = 'default';
+    activeFilterCategory = 'all';
+    activeRating = 0;
+    activePriceMin = 0;
+    activePriceMax = Infinity;
+    activeTag = 'all';
+
+    // Reset UI
+    document.querySelectorAll('.filter-option[data-filter]').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.filter === 'default');
+    });
+    document.querySelectorAll('.filter-option[data-rating]').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.rating === '0');
+    });
+    document.querySelectorAll('.filter-option[data-cat]').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.cat === 'all');
+    });
+    document.querySelectorAll('.tag-filter-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.tag === 'all');
+    });
+
+    var minEl = document.getElementById('price-slider-min');
+    var maxEl = document.getElementById('price-slider-max');
+    if (minEl) minEl.value = 0;
+    if (maxEl) maxEl.value = maxEl.max || 10000000;
+    onPriceSlider();
+
+    var labelEl = document.getElementById('filter-label');
+    if (labelEl) labelEl.textContent = 'Filter';
+
+    var searchInput = document.getElementById('productSearch');
+    if (searchInput) searchInput.value = '';
+
+    updateActiveChips();
+    applyAllFilters();
+    closeFilterDropdown();
+    showNotification('🔄 Filter direset');
+}
+
+function closeFilterDropdown() {
+    var dd = document.getElementById('search-filter-dropdown');
+    var chevron = document.getElementById('filter-chevron');
+    var btn = document.getElementById('search-filter-btn');
+    if (dd) dd.classList.remove('open');
+    if (chevron) chevron.style.transform = '';
+    if (btn) btn.classList.remove('active');
 }
 
 // ========================
@@ -862,7 +1110,7 @@ function performSearch() {
 
     productCards.forEach(function(card) {
         var name = ((card.querySelector('.product-name') || {}).textContent || '').toLowerCase();
-        var isVisible = !searchTerm || name.includes(searchTerm);
+        var isVisible = !searchTerm || fuzzyMatch(name, searchTerm);
         card.style.display = isVisible ? '' : 'none';
         if (isVisible) visibleCount++;
     });
