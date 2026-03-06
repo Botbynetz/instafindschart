@@ -3052,7 +3052,7 @@ body {
     background: white;
     width: 100%;
     max-width: 520px;
-    max-height: 88vh;
+    height: 88vh;
     border-radius: 24px 24px 0 0;
     display: flex;
     flex-direction: column;
@@ -3065,6 +3065,7 @@ body {
     #filter-modal { align-items: center; }
     .fm-sheet {
         border-radius: 20px;
+        height: auto;
         max-height: 80vh;
         transform: translateY(30px) scale(0.96);
     }
@@ -3102,8 +3103,10 @@ body {
 /* Body */
 .fm-body {
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     padding: 16px 20px;
     flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 4px;
