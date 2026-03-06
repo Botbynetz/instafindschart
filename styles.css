@@ -2054,34 +2054,101 @@ body {
 }
 
 
-/* ======================== PRODUCT VIDEO ======================== */
-.product-video-wrap {
-    padding: 0 0 8px;
-    background: #000;
-}
-
-.product-video-label {
-    padding: 6px 10px;
-    font-size: 11px;
-    font-weight: 700;
-    color: white;
-    background: linear-gradient(135deg, #667eea, #764ba2);
+/* ======================== PRODUCT VIDEO BUTTON ======================== */
+/* Ikon play di pojok kiri bawah foto — gaya Shopee */
+.product-video-btn {
+    position: absolute;
+    bottom: 32px;
+    left: 8px;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
+    background: rgba(0,0,0,0.62);
+    backdrop-filter: blur(4px);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 4px 10px 4px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    z-index: 10;
+    transition: background 0.2s, transform 0.15s;
 }
 
-.product-video-frame {
+.product-video-btn:hover {
+    background: rgba(0,0,0,0.85);
+    transform: scale(1.05);
+}
+
+.product-video-btn .fa-youtube { color: #ff0000; font-size: 14px; }
+.product-video-btn .fa-tiktok  { color: #ffffff; font-size: 13px; }
+
+/* ======================== VIDEO POPUP ======================== */
+#video-popup {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    align-items: center;
+    justify-content: center;
+}
+
+.vp-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    backdrop-filter: blur(10px);
+}
+
+.vp-container {
+    position: relative;
+    z-index: 1;
+    width: min(92vw, 700px);
+    background: #000;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+    animation: popupIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes popupIn {
+    from { opacity:0; transform: scale(0.88); }
+    to   { opacity:1; transform: scale(1); }
+}
+
+.vp-frame-wrap {
     position: relative;
     aspect-ratio: 16/9;
     width: 100%;
     background: #000;
 }
 
-.product-video-frame iframe {
+.vp-frame-wrap iframe {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     border: none;
 }
+
+.vp-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+    width: 34px;
+    height: 34px;
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(4px);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+.vp-close:hover { background: rgba(255,255,255,0.35); }
