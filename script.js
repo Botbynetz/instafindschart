@@ -211,20 +211,23 @@ function renderProducts(products) {
             '</button>';
         }
 
+        var pid = product.id;
         productCard.innerHTML =
-            '<div class="product-image-carousel" style="position:relative;">' +
+            '<div class="product-image-carousel" style="position:relative;" onclick="openProductDetail(\'' + pid + '\')" style="cursor:pointer;">' +
                 '<div class="product-images-container">' + slidesHTML + '</div>' +
                 navHTML +
                 indicatorsHTML +
                 videoOverlay +
             '</div>' +
-            '<div class="product-info">' +
+            '<div class="product-info" onclick="openProductDetail(\'' + pid + '\')" style="cursor:pointer;">' +
                 '<h3 class="product-name">' + product.name + '</h3>' +
+            '</div>' +
+            '<div class="product-actions">' +
                 '<button class="btn-buy" onclick="trackAndRedirect(\'' + affLink + '\', \'' + product.id + '\')">' +
                     '🛒 Beli Sekarang' +
                 '</button>' +
                 '<button class="btn-share" onclick="shareProduct(\'' + encodeURIComponent(product.name) + '\', \'' + affLink + '\')">' +
-                    '🔗 Bagikan Produk' +
+                    '🔗 Bagikan' +
                 '</button>' +
             '</div>';
 
@@ -944,6 +947,131 @@ document.addEventListener('DOMContentLoaded', function() {
 
 console.log('✅ script.js loaded!');
 
+
+// ========================
+// PRODUCT DETAIL POPUP
+// ========================
+function openProductDetail(productId) {
+    var product = allProducts.find(function(p) { return p.id == productId; });
+    if (!product) return;
+
+    var existing = document.getElementById('product-detail-modal');
+    if (existing) existing.remove();
+
+    var images = [];
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+        images = product.images;
+    } else if (product.image) {
+        images = [product.image];
+    }
+
+    var affLink = product.affiliatelink || '#';
+    var catName = product.categoryName || categoryNameMap[String(product.category)] || product.category || '';
+    var parsedVid = parseVideoUrl(product.video);
+
+    // Format harga
+    function fmtPrice(n) {
+        return n ? 'Rp ' + parseInt(n).toLocaleString('id-ID') : '';
+    }
+
+    var modal = document.createElement('div');
+    modal.id = 'product-detail-modal';
+    modal.innerHTML =
+        '<div class="pdm-backdrop" onclick="closeProductDetail()"></div>' +
+        '<div class="pdm-container">' +
+            '<button class="pdm-close" onclick="closeProductDetail()"><i class="fas fa-times"></i></button>' +
+
+            // Image gallery
+            '<div class="pdm-gallery">' +
+                '<div class="pdm-main-img-wrap" id="pdm-main-wrap">' +
+                    '<img id="pdm-main-img" src="' + (images[0] || '') + '" alt="' + product.name + '" onclick="openLightbox(this.src, 0, ' + JSON.stringify(images).replace(/"/g,'&quot;') + ')">' +
+                    (parsedVid ? '<button class="pdm-video-btn" data-embed="' + parsedVid.embed + '" data-type="' + parsedVid.type + '" onclick="openVideoPopup(this.dataset.embed,this.dataset.type,event)"><i class="fas fa-play-circle"></i> Tonton Video</button>' : '') +
+                '</div>' +
+                (images.length > 1 ?
+                    '<div class="pdm-thumbs">' +
+                        images.map(function(img, i) {
+                            return '<img src="' + img + '" class="pdm-thumb' + (i===0?' active':'') + '" onclick="pdmSetImg(this.src,this)">';
+                        }).join('') +
+                    '</div>'
+                : '') +
+            '</div>' +
+
+            // Info section
+            '<div class="pdm-info">' +
+                (catName ? '<div class="pdm-category"><i class="fas fa-tag"></i> ' + catName + '</div>' : '') +
+                '<h2 class="pdm-title">' + product.name + '</h2>' +
+
+                // Harga
+                (product.price ?
+                    '<div class="pdm-price-wrap">' +
+                        '<span class="pdm-price">' + fmtPrice(product.price) + '</span>' +
+                        (product.originalprice && product.originalprice > product.price ?
+                            '<span class="pdm-original">' + fmtPrice(product.originalprice) + '</span>' +
+                            '<span class="pdm-discount">Hemat ' + Math.round((1 - product.price/product.originalprice)*100) + '%</span>'
+                        : '') +
+                    '</div>'
+                : '') +
+
+                // Rating
+                (product.rating ?
+                    '<div class="pdm-rating">' +
+                        '<span class="pdm-stars">' + '★'.repeat(Math.round(product.rating)) + '☆'.repeat(5-Math.round(product.rating)) + '</span>' +
+                        '<span class="pdm-rating-num">' + product.rating + '</span>' +
+                        (product.reviews ? '<span class="pdm-reviews">(' + product.reviews + ' ulasan)</span>' : '') +
+                    '</div>'
+                : '') +
+
+                // Stats
+                '<div class="pdm-stats">' +
+                    (product.clicks ? '<span><i class="fas fa-mouse-pointer"></i> ' + product.clicks + ' klik</span>' : '') +
+                '</div>' +
+
+                // Deskripsi
+                (product.description ?
+                    '<div class="pdm-desc">' +
+                        '<div class="pdm-desc-title">Deskripsi Produk</div>' +
+                        '<p>' + product.description + '</p>' +
+                    '</div>'
+                : '') +
+
+                // CTA buttons
+                '<div class="pdm-cta">' +
+                    '<button class="pdm-btn-buy" data-link="' + affLink + '" data-id="' + product.id + '" onclick="trackAndRedirect(this.dataset.link,this.dataset.id)">' +
+                        '<i class="fas fa-shopping-cart"></i> Beli Sekarang' +
+                    '</button>' +
+                    '<button class="pdm-btn-share" data-name="' + encodeURIComponent(product.name) + '" data-link="' + affLink + '" onclick="shareProduct(this.dataset.name,this.dataset.link)">' +
+                        '<i class="fas fa-share-alt"></i>' +
+                    '</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+    document.body.appendChild(modal);
+    requestAnimationFrame(function() { modal.classList.add('open'); });
+    document.body.style.overflow = 'hidden';
+}
+
+function pdmSetImg(src, el) {
+    var main = document.getElementById('pdm-main-img');
+    if (main) {
+        main.style.opacity = '0';
+        setTimeout(function() { main.src = src; main.style.opacity = '1'; }, 150);
+    }
+    document.querySelectorAll('.pdm-thumb').forEach(function(t) { t.classList.remove('active'); });
+    if (el) el.classList.add('active');
+}
+
+function closeProductDetail() {
+    var modal = document.getElementById('product-detail-modal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    setTimeout(function() { modal.remove(); }, 300);
+    document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeProductDetail();
+});
 
 // ========================
 // VIDEO POPUP
