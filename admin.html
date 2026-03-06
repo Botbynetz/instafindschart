@@ -391,6 +391,17 @@
                 </div>
 
                 <div class="form-group full-width">
+                    <label>🎬 Video Produk <small style="color:#aaa;">(opsional) — URL YouTube atau TikTok</small></label>
+                    <div style="display:flex;gap:8px;align-items:flex-start;flex-direction:column;">
+                        <input type="url" id="product-video" placeholder="https://youtube.com/watch?v=... atau https://www.tiktok.com/@.../video/...">
+                        <div id="video-preview-wrap" style="display:none;width:100%;border-radius:10px;overflow:hidden;aspect-ratio:16/9;background:#000;">
+                            <iframe id="video-preview-frame" src="" frameborder="0" allowfullscreen style="width:100%;height:100%;"></iframe>
+                        </div>
+                        <small id="video-hint" style="color:#aaa;font-size:11px;"></small>
+                    </div>
+                </div>
+
+                <div class="form-group full-width">
                     <label>Platform Affiliate *</label>
                     <div class="platform-checkboxes">
                         <label class="checkbox">
