@@ -41,38 +41,66 @@ var editingProductId = null;
 // ========================
 // INIT
 // ========================
-document.addEventListener('DOMContentLoaded', function() {
-    loadCategoriesFromStorage();
-    initDefaultCategories();
+document.addEventListener('DOMContentLoaded', async function() {
     setupEventListeners();
+    loadCategoriesFromStorage(); // migrate localStorage jika ada
+    await loadCategoriesFromSupabase();
     loadProductsFromSupabase();
 });
 
 // ========================
-// CATEGORIES (localStorage)
+// CATEGORIES (Supabase)
 // ========================
 function loadCategoriesFromStorage() {
+    // Legacy: migrate dari localStorage ke Supabase jika ada
     var stored = localStorage.getItem('instafinds_categories');
-    categories = stored ? JSON.parse(stored) : [];
+    if (stored) {
+        try {
+            var localCats = JSON.parse(stored);
+            if (localCats && localCats.length > 0) {
+                migrateLocalCategoriesToSupabase(localCats);
+            }
+        } catch(e) {}
+    }
+}
+
+async function migrateLocalCategoriesToSupabase(localCats) {
+    try {
+        var existing = await window.supabase.from('categories').select('id');
+        if (existing.data && existing.data.length === 0) {
+            // Kosong di Supabase, migrate
+            for (var c of localCats) {
+                await window.supabase.from('categories').insert([{
+                    name: c.name, icon: c.icon || 'fas fa-tag', description: c.description || ''
+                }]);
+            }
+            localStorage.removeItem('instafinds_categories');
+            console.log('✅ Kategori berhasil dipindahkan ke Supabase');
+            await loadCategoriesFromSupabase();
+        } else {
+            localStorage.removeItem('instafinds_categories');
+        }
+    } catch(e) {}
+}
+
+async function loadCategoriesFromSupabase() {
+    try {
+        var result = await window.supabase.from('categories').select('*').order('id', { ascending: true });
+        if (result.error) throw result.error;
+        categories = result.data || [];
+        renderCategories();
+    } catch(e) {
+        console.error('Gagal load kategori:', e);
+        categories = [];
+    }
 }
 
 function saveCategoriesLocally() {
-    localStorage.setItem('instafinds_categories', JSON.stringify(categories));
+    // Noop - sekarang pakai Supabase
 }
 
 function initDefaultCategories() {
-    if (categories.length === 0) {
-        categories = [
-            { id: 1, name: 'Kecantikan', icon: 'fas fa-lipstick', description: 'Produk kecantikan dan perawatan' },
-            { id: 2, name: 'Fashion', icon: 'fas fa-shirt', description: 'Pakaian dan fashion items' },
-            { id: 3, name: 'Sepatu', icon: 'fas fa-shoe-prints', description: 'Koleksi sepatu terlengkap' },
-            { id: 4, name: 'Aksesoris', icon: 'fas fa-ring', description: 'Aksesoris fashion dan perhiasan' },
-            { id: 5, name: 'Elektronik', icon: 'fas fa-phone', description: 'Gadget dan elektronik terkini' },
-            { id: 6, name: 'Rumah Tangga', icon: 'fas fa-home', description: 'Perlengkapan rumah tangga' }
-        ];
-        saveCategoriesLocally();
-        renderCategories();
-    }
+    // Noop - default sudah di SQL
 }
 
 // ========================
@@ -914,34 +942,38 @@ function editCategory(categoryId) {
 function deleteCategory(categoryId) {
     var inUse = products.filter(function(p) { return p.category == categoryId; }).length;
     if (inUse > 0) { alert('Tidak bisa menghapus kategori yang masih memiliki ' + inUse + ' produk'); return; }
-    showConfirm('Hapus Kategori?', 'Apakah Anda yakin?', function() {
-        categories = categories.filter(function(c) { return c.id != categoryId; });
-        saveCategoriesLocally();
-        renderCategories();
+    showConfirm('Hapus Kategori?', 'Apakah Anda yakin?', async function() {
+        try {
+            await window.supabase.from('categories').delete().eq('id', categoryId);
+            await loadCategoriesFromSupabase();
+            showNotification('✅ Kategori dihapus', 'success');
+        } catch(err) {
+            showNotification('❌ Gagal hapus: ' + err.message, 'error');
+        }
     });
 }
 
-function handleCategorySubmit(e) {
+async function handleCategorySubmit(e) {
     e.preventDefault();
-    var name = document.getElementById('category-name').value;
-    var icon = document.getElementById('category-icon').value;
-    var description = document.getElementById('category-description').value;
+    var name = document.getElementById('category-name').value.trim();
+    var icon = document.getElementById('category-icon').value.trim();
+    var description = document.getElementById('category-description').value.trim();
     var editId = document.getElementById('category-form').dataset.editId;
     if (!name || !icon) { alert('Mohon isi semua field yang diperlukan'); return; }
 
-    if (editId) {
-        var index = categories.findIndex(function(c) { return c.id == editId; });
-        categories[index] = { id: parseInt(editId), name: name, icon: icon, description: description };
-    } else {
-        var newId = categories.length > 0 ? Math.max.apply(null, categories.map(function(c) { return c.id; })) + 1 : 1;
-        categories.push({ id: newId, name: name, icon: icon, description: description });
+    try {
+        if (editId) {
+            await window.supabase.from('categories').update({ name: name, icon: icon, description: description }).eq('id', editId);
+        } else {
+            await window.supabase.from('categories').insert([{ name: name, icon: icon, description: description }]);
+        }
+        await loadCategoriesFromSupabase();
+        closeModal('category-modal');
+        document.getElementById('category-form').removeAttribute('data-edit-id');
+        showNotification('✅ Kategori berhasil disimpan!', 'success');
+    } catch(err) {
+        showNotification('❌ Gagal simpan kategori: ' + err.message, 'error');
     }
-
-    saveCategoriesLocally();
-    closeModal('category-modal');
-    renderCategories();
-    document.getElementById('category-form').removeAttribute('data-edit-id');
-    showNotification('Kategori berhasil disimpan!', 'success');
 }
 
 // ========================
@@ -969,8 +1001,12 @@ function importData(e) {
                 for (var i = 0; i < data.products.length; i++) {
                     await window.supabase.from('products').upsert([data.products[i]]);
                 }
-                categories = data.categories;
-                saveCategoriesLocally();
+                if (data.categories) {
+                    for (var cat of data.categories) {
+                        await window.supabase.from('categories').upsert([{ name: cat.name, icon: cat.icon || 'fas fa-tag', description: cat.description || '' }]);
+                    }
+                    await loadCategoriesFromSupabase();
+                }
                 await loadProductsFromSupabase();
                 renderDashboard();
                 showNotification('Data berhasil di-import!', 'success');
@@ -986,10 +1022,7 @@ async function resetAllData() {
         try {
             var result = await window.supabase.from('products').delete().neq('id', '');
             if (result.error) throw result.error;
-            categories = [];
-            saveCategoriesLocally();
             await loadProductsFromSupabase();
-            initDefaultCategories();
             renderDashboard();
             showNotification('Semua data telah direset', 'success');
         } catch (err) {
