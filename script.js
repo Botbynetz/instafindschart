@@ -946,6 +946,8 @@ function updateAuthUI() {
     var nameEl = document.getElementById('user-display-name');
     var wishBtn = document.getElementById('btn-wishlist-page');
     var authBtn = document.getElementById('btn-auth-user');
+    var searchAuthBtn = document.getElementById('search-auth-btn');
+    var searchAuthLabel = document.getElementById('search-auth-label');
 
     if (currentUser) {
         var name = currentUser.user_metadata && currentUser.user_metadata.full_name
@@ -954,19 +956,31 @@ function updateAuthUI() {
         if (nameEl) nameEl.textContent = name;
         if (wishBtn) wishBtn.style.display = 'flex';
         if (authBtn) authBtn.title = 'Keluar';
+        // Search bar: tampilkan nama + avatar warna
+        if (searchAuthLabel) searchAuthLabel.textContent = name;
+        if (searchAuthBtn) {
+            searchAuthBtn.classList.add('logged-in');
+            searchAuthBtn.title = 'Keluar dari ' + currentUser.email;
+        }
     } else {
         if (nameEl) nameEl.textContent = 'Masuk';
         if (wishBtn) wishBtn.style.display = 'none';
         if (authBtn) authBtn.title = 'Masuk';
+        // Search bar: tampilkan "Masuk"
+        if (searchAuthLabel) searchAuthLabel.textContent = 'Masuk';
+        if (searchAuthBtn) {
+            searchAuthBtn.classList.remove('logged-in');
+            searchAuthBtn.title = 'Masuk ke akun kamu';
+        }
     }
 }
 
 function handleAuthClick() {
     if (currentUser) {
-        // Show user menu: logout option
         if (confirm('Keluar dari akun ' + currentUser.email + '?')) {
-            window.supabase.auth.signOut();
-            showNotification('👋 Berhasil keluar');
+            window.supabase.auth.signOut().then(function() {
+                showNotification('👋 Berhasil keluar');
+            });
         }
     } else {
         openAuthModal();
