@@ -214,6 +214,9 @@ function renderProducts(products) {
         var pid = product.id;
         productCard.innerHTML =
             '<div class="product-image-carousel" style="position:relative;" onclick="openProductDetail(\'' + pid + '\')" style="cursor:pointer;">' +
+                '<button class="wishlist-heart" data-id="' + pid + '" onclick="toggleWishlist(\'' + pid + '\',event)" title="Simpan ke Wishlist">' +
+                    '<i class="' + (userWishlist.has(String(pid)) ? 'fas' : 'far') + ' fa-heart"></i>' +
+                '</button>' +
                 '<div class="product-images-container">' + slidesHTML + '</div>' +
                 navHTML +
                 indicatorsHTML +
@@ -904,6 +907,334 @@ function initScrollTopButton() {
         btn.style.pointerEvents = window.scrollY > 300 ? 'auto' : 'none';
     });
     btn.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+}
+
+
+// ========================
+// AUTH & WISHLIST
+// ========================
+var currentUser = null;
+var userWishlist = new Set();
+
+// Init auth state on load
+window.addEventListener('load', async function() {
+    if (!window.supabase) return;
+
+    // Listen for auth changes
+    window.supabase.auth.onAuthStateChange(async function(event, session) {
+        currentUser = session ? session.user : null;
+        updateAuthUI();
+        if (currentUser) {
+            await loadWishlist();
+            refreshWishlistHearts();
+        } else {
+            userWishlist = new Set();
+            refreshWishlistHearts();
+        }
+    });
+
+    // Check existing session
+    var { data } = await window.supabase.auth.getSession();
+    if (data.session) {
+        currentUser = data.session.user;
+        updateAuthUI();
+        await loadWishlist();
+    }
+});
+
+function updateAuthUI() {
+    var nameEl = document.getElementById('user-display-name');
+    var wishBtn = document.getElementById('btn-wishlist-page');
+    var authBtn = document.getElementById('btn-auth-user');
+
+    if (currentUser) {
+        var name = currentUser.user_metadata && currentUser.user_metadata.full_name
+            ? currentUser.user_metadata.full_name.split(' ')[0]
+            : currentUser.email.split('@')[0];
+        if (nameEl) nameEl.textContent = name;
+        if (wishBtn) wishBtn.style.display = 'flex';
+        if (authBtn) authBtn.title = 'Keluar';
+    } else {
+        if (nameEl) nameEl.textContent = 'Masuk';
+        if (wishBtn) wishBtn.style.display = 'none';
+        if (authBtn) authBtn.title = 'Masuk';
+    }
+}
+
+function handleAuthClick() {
+    if (currentUser) {
+        // Show user menu: logout option
+        if (confirm('Keluar dari akun ' + currentUser.email + '?')) {
+            window.supabase.auth.signOut();
+            showNotification('👋 Berhasil keluar');
+        }
+    } else {
+        openAuthModal();
+    }
+}
+
+// ========================
+// AUTH MODAL
+// ========================
+var authMode = 'login'; // login | register
+
+function openAuthModal() {
+    var modal = document.getElementById('auth-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        requestAnimationFrame(function() { modal.classList.add('open'); });
+        clearAuthMessages();
+    }
+}
+
+function closeAuthModal() {
+    var modal = document.getElementById('auth-modal');
+    if (modal) {
+        modal.classList.remove('open');
+        setTimeout(function() { modal.style.display = 'none'; }, 300);
+        document.body.style.overflow = '';
+    }
+}
+
+function switchAuthTab(mode) {
+    authMode = mode;
+    var tabLogin = document.getElementById('tab-login');
+    var tabReg = document.getElementById('tab-register');
+    var btnText = document.getElementById('auth-btn-text');
+    var footer = document.getElementById('auth-footer');
+    var title = document.getElementById('auth-title');
+
+    if (mode === 'login') {
+        if (tabLogin) tabLogin.classList.add('active');
+        if (tabReg) tabReg.classList.remove('active');
+        if (btnText) btnText.textContent = 'Masuk';
+        if (title) title.textContent = 'Masuk ke Instafinds.id';
+        if (footer) footer.innerHTML = 'Belum punya akun? <a href="#" onclick="switchAuthTab(\'register\')">Daftar gratis</a>';
+    } else {
+        if (tabLogin) tabLogin.classList.remove('active');
+        if (tabReg) tabReg.classList.add('active');
+        if (btnText) btnText.textContent = 'Daftar';
+        if (title) title.textContent = 'Daftar ke Instafinds.id';
+        if (footer) footer.innerHTML = 'Sudah punya akun? <a href="#" onclick="switchAuthTab(\'login\')">Masuk</a>';
+    }
+    clearAuthMessages();
+}
+
+function clearAuthMessages() {
+    var err = document.getElementById('auth-error');
+    var suc = document.getElementById('auth-success');
+    if (err) err.style.display = 'none';
+    if (suc) suc.style.display = 'none';
+}
+
+async function handleAuth() {
+    var email = (document.getElementById('auth-email') || {}).value || '';
+    var password = (document.getElementById('auth-password') || {}).value || '';
+    var btn = document.getElementById('auth-submit-btn');
+    var btnText = document.getElementById('auth-btn-text');
+
+    if (!email || !password) {
+        showAuthError('Isi email dan password dulu ya!');
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+    if (btnText) btnText.textContent = 'Loading...';
+
+    try {
+        var result;
+        if (authMode === 'login') {
+            result = await window.supabase.auth.signInWithPassword({ email: email, password: password });
+        } else {
+            result = await window.supabase.auth.signUp({ email: email, password: password });
+        }
+
+        if (result.error) throw result.error;
+
+        if (authMode === 'register' && result.data && !result.data.session) {
+            showAuthSuccess('✅ Cek email kamu untuk verifikasi akun!');
+        } else {
+            showNotification('✅ Berhasil masuk! Selamat datang 👋');
+            closeAuthModal();
+        }
+    } catch(err) {
+        var msg = err.message || 'Terjadi kesalahan';
+        if (msg.includes('Invalid login')) msg = 'Email atau password salah';
+        if (msg.includes('already registered')) msg = 'Email sudah terdaftar, coba masuk';
+        if (msg.includes('Password should')) msg = 'Password minimal 6 karakter';
+        showAuthError(msg);
+    }
+
+    if (btn) btn.disabled = false;
+    if (btnText) btnText.textContent = authMode === 'login' ? 'Masuk' : 'Daftar';
+}
+
+async function loginWithGoogle() {
+    try {
+        await window.supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: window.location.href }
+        });
+    } catch(e) {
+        showAuthError('Login Google gagal: ' + e.message);
+    }
+}
+
+function showAuthError(msg) {
+    var el = document.getElementById('auth-error');
+    if (el) { el.textContent = msg; el.style.display = 'flex'; }
+    var suc = document.getElementById('auth-success');
+    if (suc) suc.style.display = 'none';
+}
+
+function showAuthSuccess(msg) {
+    var el = document.getElementById('auth-success');
+    if (el) { el.textContent = msg; el.style.display = 'flex'; }
+    var err = document.getElementById('auth-error');
+    if (err) err.style.display = 'none';
+}
+
+// Enter key on auth form
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && document.getElementById('auth-modal') &&
+        document.getElementById('auth-modal').style.display === 'flex') {
+        handleAuth();
+    }
+});
+
+// ========================
+// WISHLIST LOGIC
+// ========================
+async function loadWishlist() {
+    if (!currentUser) return;
+    try {
+        var result = await window.supabase
+            .from('wishlists')
+            .select('product_id')
+            .eq('user_id', currentUser.id);
+        if (result.data) {
+            userWishlist = new Set(result.data.map(function(r) { return String(r.product_id); }));
+            updateWishlistCount();
+        }
+    } catch(e) {}
+}
+
+async function toggleWishlist(productId, e) {
+    if (e) e.stopPropagation();
+
+    if (!currentUser) {
+        openAuthModal();
+        showNotification('💡 Masuk dulu untuk menyimpan produk!');
+        return;
+    }
+
+    var pid = String(productId);
+    var btn = document.querySelector('.wishlist-heart[data-id="' + pid + '"]');
+    var icon = btn ? btn.querySelector('i') : null;
+    var isWished = userWishlist.has(pid);
+
+    // Optimistic UI
+    if (isWished) {
+        userWishlist.delete(pid);
+        if (icon) { icon.className = 'far fa-heart'; }
+        if (btn) btn.classList.remove('wished');
+    } else {
+        userWishlist.add(pid);
+        if (icon) { icon.className = 'fas fa-heart'; }
+        if (btn) { btn.classList.add('wished'); btn.classList.add('pop'); setTimeout(function() { btn.classList.remove('pop'); }, 400); }
+    }
+    updateWishlistCount();
+
+    try {
+        if (isWished) {
+            await window.supabase.from('wishlists').delete()
+                .eq('user_id', currentUser.id).eq('product_id', pid);
+        } else {
+            await window.supabase.from('wishlists').insert([
+                { user_id: currentUser.id, product_id: pid }
+            ]);
+            showNotification('❤️ Produk disimpan ke wishlist!');
+        }
+    } catch(err) {
+        // Rollback on error
+        if (isWished) userWishlist.add(pid); else userWishlist.delete(pid);
+        refreshWishlistHearts();
+        showNotification('❌ Gagal menyimpan');
+    }
+}
+
+function updateWishlistCount() {
+    var count = userWishlist.size;
+    var el = document.getElementById('wishlist-count');
+    if (el) el.textContent = count;
+    var btn = document.getElementById('btn-wishlist-page');
+    if (btn) btn.style.display = currentUser && count > 0 ? 'flex' : (currentUser ? 'flex' : 'none');
+}
+
+function refreshWishlistHearts() {
+    document.querySelectorAll('.wishlist-heart').forEach(function(btn) {
+        var pid = String(btn.dataset.id);
+        var icon = btn.querySelector('i');
+        var wished = userWishlist.has(pid);
+        if (icon) icon.className = wished ? 'fas fa-heart' : 'far fa-heart';
+        btn.classList.toggle('wished', wished);
+    });
+    updateWishlistCount();
+}
+
+// ========================
+// WISHLIST PAGE
+// ========================
+function toggleWishlistPage() {
+    var page = document.getElementById('wishlist-page');
+    if (!page) return;
+    var isOpen = page.style.display === 'block';
+    if (isOpen) {
+        closeWishlistPage();
+    } else {
+        page.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        renderWishlistPage();
+    }
+}
+
+function closeWishlistPage() {
+    var page = document.getElementById('wishlist-page');
+    if (page) page.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function renderWishlistPage() {
+    var grid = document.getElementById('wishlist-grid');
+    if (!grid) return;
+
+    var wishedProducts = allProducts.filter(function(p) {
+        return userWishlist.has(String(p.id));
+    });
+
+    var badge = document.getElementById('wishlist-count-badge');
+    if (badge) badge.textContent = wishedProducts.length;
+
+    if (wishedProducts.length === 0) {
+        grid.innerHTML = '<div class="wishlist-empty"><i class="far fa-heart"></i><p>Belum ada produk tersimpan</p><small>Tekan ❤️ di produk untuk menyimpannya</small></div>';
+        return;
+    }
+
+    grid.innerHTML = wishedProducts.map(function(p) {
+        var img = (p.images && p.images[0]) || p.image || '';
+        var price = p.price ? 'Rp ' + parseInt(p.price).toLocaleString('id-ID') : '';
+        return '<div class="wl-card" onclick="closeWishlistPage();setTimeout(function(){openProductDetail(\''+p.id+'\')},100)">' +
+            '<div class="wl-img-wrap"><img src="' + img + '" alt="' + p.name + '" loading="lazy"></div>' +
+            '<div class="wl-info">' +
+                '<h4>' + p.name + '</h4>' +
+                (price ? '<div class="wl-price">' + price + '</div>' : '') +
+            '</div>' +
+            '<button class="wl-remove" onclick="event.stopPropagation();toggleWishlist(\''+p.id+'\');setTimeout(renderWishlistPage,300)" title="Hapus">' +
+                '<i class="fas fa-trash-alt"></i>' +
+            '</button>' +
+        '</div>';
+    }).join('');
 }
 
 // ========================
