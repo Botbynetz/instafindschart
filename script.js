@@ -182,25 +182,23 @@ function renderProducts(products) {
                 '<button class="carousel-nav carousel-next" aria-label="Next"><i class="fas fa-chevron-right"></i></button>';
         }
 
-        // Video embed if available
-        var videoHTML = '';
+        // Video play button overlay jika ada video
         var parsedVideo = parseVideoUrl(product.video);
+        var videoOverlay = '';
         if (parsedVideo) {
-            videoHTML = '<div class="product-video-wrap">' +
-                '<div class="product-video-label"><i class="fas fa-play-circle"></i> Video Produk</div>' +
-                '<div class="product-video-frame">' +
-                    '<iframe src="' + parsedVideo.embed + '" frameborder="0" allowfullscreen loading="lazy"></iframe>' +
-                '</div>' +
-            '</div>';
+            videoOverlay = '<button class="product-video-btn" onclick="openVideoPopup(\'' + parsedVideo.embed + '\',event)" title="Tonton Video Produk">' +
+                '<i class="fab fa-' + (parsedVideo.type === 'youtube' ? 'youtube' : 'tiktok') + '"></i>' +
+                '<span>Video</span>' +
+            '</button>';
         }
 
         productCard.innerHTML =
-            '<div class="product-image-carousel">' +
+            '<div class="product-image-carousel" style="position:relative;">' +
                 '<div class="product-images-container">' + slidesHTML + '</div>' +
                 navHTML +
                 indicatorsHTML +
+                videoOverlay +
             '</div>' +
-            videoHTML +
             '<div class="product-info">' +
                 '<h3 class="product-name">' + product.name + '</h3>' +
                 '<button class="btn-buy" onclick="trackAndRedirect(\'' + affLink + '\', \'' + product.id + '\')">' +
@@ -932,6 +930,43 @@ document.addEventListener('DOMContentLoaded', function() {
 
 console.log('✅ script.js loaded!');
 
+
+// ========================
+// VIDEO POPUP
+// ========================
+function openVideoPopup(embedUrl, e) {
+    if (e) e.stopPropagation();
+
+    var popup = document.getElementById('video-popup');
+    if (!popup) {
+        popup = document.createElement('div');
+        popup.id = 'video-popup';
+        popup.innerHTML =
+            '<div class="vp-backdrop" onclick="closeVideoPopup()"></div>' +
+            '<div class="vp-container">' +
+                '<button class="vp-close" onclick="closeVideoPopup()"><i class="fas fa-times"></i></button>' +
+                '<div class="vp-frame-wrap">' +
+                    '<iframe id="vp-iframe" src="" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(popup);
+    }
+
+    var iframe = document.getElementById('vp-iframe');
+    // autoplay=1 for YouTube
+    var src = embedUrl.includes('youtube.com') ? embedUrl + '&autoplay=1' : embedUrl;
+    if (iframe) iframe.src = src;
+    popup.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeVideoPopup() {
+    var popup = document.getElementById('video-popup');
+    var iframe = document.getElementById('vp-iframe');
+    if (iframe) iframe.src = ''; // stop video
+    if (popup) popup.style.display = 'none';
+    document.body.style.overflow = '';
+}
 
 // ========================
 // VIDEO PARSER
