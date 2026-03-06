@@ -84,38 +84,21 @@ async function loadProducts() {
         '<i class="fas fa-spinner fa-spin" style="font-size:30px;display:block;margin-bottom:10px;"></i>' +
         'Memuat produk...</div>';
 
-    // Load kategori dari Supabase
+    // Load kategori dari Supabase → isi categoryNameMap
+    categoryNameMap = {};
     try {
         var catResult = await window.supabase.from('categories').select('id, name');
-        if (catResult.data) {
+        if (catResult.data && catResult.data.length > 0) {
             catResult.data.forEach(function(cat) {
                 categoryNameMap[String(cat.id)] = cat.name;
                 categoryNameMap[cat.id] = cat.name;
                 if (cat.name) categoryNameMap[cat.name.toLowerCase()] = cat.name;
             });
+            console.log('📂 Categories loaded:', JSON.stringify(categoryNameMap));
         }
     } catch(e) {
-        // Fallback ke localStorage kalau Supabase gagal
-        try {
-            var stored = localStorage.getItem('instafinds_categories');
-            if (stored) JSON.parse(stored).forEach(function(cat) {
-                categoryNameMap[String(cat.id)] = cat.name;
-            });
-        } catch(e2) {}
+        console.warn('⚠️ Gagal load categories:', e);
     }
-
-    // Reload categoryNameMap setiap kali loadProducts dipanggil
-    categoryNameMap = {};
-    try {
-        var catFresh = await window.supabase.from('categories').select('id, name');
-        if (catFresh.data) {
-            catFresh.data.forEach(function(cat) {
-                categoryNameMap[String(cat.id)] = cat.name;
-                categoryNameMap[cat.id] = cat.name;
-                if (cat.name) categoryNameMap[cat.name.toLowerCase()] = cat.name;
-            });
-        }
-    } catch(e) {}
 
     try {
         var result = await window.supabase
