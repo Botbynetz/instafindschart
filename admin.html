@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
     <!-- Sidebar -->
@@ -34,6 +35,10 @@
             <a href="#events" class="nav-item" data-page="events">
                 <i class="fas fa-calendar-alt"></i>
                 <span>Event</span>
+            </a>
+            <a href="#analytics" class="nav-item" data-page="analytics">
+                <i class="fas fa-chart-line"></i>
+                <span>Analytics</span>
             </a>
             <a href="#settings" class="nav-item" data-page="settings">
                 <i class="fas fa-sliders-h"></i>
@@ -219,6 +224,70 @@
             </div>
 
             <!-- Settings Page -->
+            <!-- Analytics Page -->
+            <div class="page" id="analytics-page" data-page="analytics" style="display:none;">
+                <div class="analytics-header">
+                    <div class="analytics-period">
+                        <button class="period-btn active" onclick="setAnalyticsPeriod(7,this)">7 Hari</button>
+                        <button class="period-btn" onclick="setAnalyticsPeriod(30,this)">30 Hari</button>
+                        <button class="period-btn" onclick="setAnalyticsPeriod(90,this)">3 Bulan</button>
+                    </div>
+                </div>
+
+                <!-- Stat Cards -->
+                <div class="analytics-stats">
+                    <div class="analytics-stat-card">
+                        <div class="asc-icon" style="background:#fff0e6;color:#ff6b35;"><i class="fas fa-mouse-pointer"></i></div>
+                        <div class="asc-info">
+                            <div class="asc-value" id="an-total-clicks">-</div>
+                            <div class="asc-label">Total Klik</div>
+                        </div>
+                    </div>
+                    <div class="analytics-stat-card">
+                        <div class="asc-icon" style="background:#e8f5e9;color:#2e7d32;"><i class="fas fa-box"></i></div>
+                        <div class="asc-info">
+                            <div class="asc-value" id="an-total-products">-</div>
+                            <div class="asc-label">Total Produk</div>
+                        </div>
+                    </div>
+                    <div class="analytics-stat-card">
+                        <div class="asc-icon" style="background:#fce4ec;color:#e91e63;"><i class="fas fa-heart"></i></div>
+                        <div class="asc-info">
+                            <div class="asc-value" id="an-total-wishlist">-</div>
+                            <div class="asc-label">Total Wishlist</div>
+                        </div>
+                    </div>
+                    <div class="analytics-stat-card">
+                        <div class="asc-icon" style="background:#e8eaf6;color:#3f51b5;"><i class="fas fa-plus-circle"></i></div>
+                        <div class="asc-info">
+                            <div class="asc-value" id="an-new-products">-</div>
+                            <div class="asc-label">Produk Baru Bulan Ini</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="analytics-charts-row">
+                    <!-- Top Products -->
+                    <div class="analytics-card wide">
+                        <div class="analytics-card-title"><i class="fas fa-trophy"></i> Produk Terpopuler</div>
+                        <div id="an-top-products-list"></div>
+                    </div>
+
+                    <!-- Category Chart -->
+                    <div class="analytics-card">
+                        <div class="analytics-card-title"><i class="fas fa-chart-pie"></i> Kategori Terlaris</div>
+                        <canvas id="an-category-chart" height="220"></canvas>
+                    </div>
+                </div>
+
+                <!-- Wishlist Top Products -->
+                <div class="analytics-card" style="margin-top:20px;">
+                    <div class="analytics-card-title"><i class="fas fa-heart"></i> Produk Paling Banyak di-Wishlist</div>
+                    <div id="an-top-wishlist-list"></div>
+                </div>
+            </div>
+
             <div class="page" id="settings-page" data-page="settings">
                 <div class="page-header">
                     <h2>Setelan</h2>
