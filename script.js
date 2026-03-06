@@ -130,6 +130,16 @@ function renderProducts(products) {
     var productsGrid = document.querySelector('.products-grid');
     if (!productsGrid) return;
 
+    // Enrich setiap produk dengan nama kategori dari categoryNameMap
+    products = products.map(function(p) {
+        var rawCat = String(p.category || '').trim();
+        var catName = categoryNameMap[rawCat]
+            || categoryNameMap[String(parseInt(rawCat))]
+            || categoryNameMap[rawCat.toLowerCase()]
+            || null;
+        return Object.assign({}, p, { categoryName: catName || rawCat });
+    });
+
     allProducts = products;
     productsGrid.innerHTML = '';
 
@@ -150,6 +160,7 @@ function renderProducts(products) {
         productCard.className = 'product-card';
         productCard.dataset.id = product.id || '';
         productCard.dataset.category = String(product.category || '');
+        productCard.dataset.categoryname = String(product.categoryName || product.category || '').toLowerCase();
         productCard.style.animation = 'fadeInUp 0.6s ease backwards';
         productCard.style.animationDelay = (index * 0.05) + 's';
 
@@ -563,18 +574,13 @@ function buildCategoryFilters(products) {
     products.forEach(function(p) {
         if (p.category) {
             var key = String(p.category);
+            var resolvedName = p.categoryName || categoryNameMap[key] || key;
             if (!categoryMap[key]) {
-                // Resolve nama dari Supabase categoryNameMap
-                var resolvedName = categoryNameMap[key]
-                    || categoryNameMap[parseInt(key)]
-                    || categoryNameMap[key.toLowerCase()]
-                    || CATEGORY_NAMES[key]
-                    || p.category;
                 categoryMap[key] = {
                     id: key,
                     count: 0,
                     name: resolvedName,
-                    icon: CATEGORY_ICONS[key] || CATEGORY_ICONS[resolvedName ? resolvedName.toLowerCase() : ''] || 'fas fa-tag'
+                    icon: CATEGORY_ICONS[key] || CATEGORY_ICONS[resolvedName.toLowerCase()] || 'fas fa-tag'
                 };
             }
             categoryMap[key].count++;
@@ -776,17 +782,10 @@ function buildFilterCategoryList(products) {
     products.forEach(function(p) {
         var rawKey = String(p.category || '').trim();
         if (!rawKey) return;
-        // Resolve nama: cek semua kemungkinan key
-        var resolvedName = categoryNameMap[rawKey]
-            || categoryNameMap[String(parseInt(rawKey))]
-            || categoryNameMap[rawKey.toLowerCase()]
-            || CATEGORY_NAMES[rawKey]
-            || rawKey;
-        var displayKey = rawKey;
-        if (!catMap[displayKey]) catMap[displayKey] = { name: resolvedName, count: 0, key: displayKey };
-        catMap[displayKey].count++;
+        var resolvedName = p.categoryName || categoryNameMap[rawKey] || rawKey;
+        if (!catMap[rawKey]) catMap[rawKey] = { name: resolvedName, count: 0, key: rawKey };
+        catMap[rawKey].count++;
     });
-    console.log('🗂️ Category map built:', JSON.stringify(Object.keys(catMap)));
 
     var cats = Object.values(catMap);
     list.innerHTML = '<button class="filter-option active" data-cat="all" onclick="applyFilterCategory(&quot;all&quot;,&quot;Semua&quot;)"><i class="fas fa-th"></i> Semua Kategori</button>' +
