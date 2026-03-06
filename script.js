@@ -182,12 +182,25 @@ function renderProducts(products) {
                 '<button class="carousel-nav carousel-next" aria-label="Next"><i class="fas fa-chevron-right"></i></button>';
         }
 
+        // Video embed if available
+        var videoHTML = '';
+        var parsedVideo = parseVideoUrl(product.video);
+        if (parsedVideo) {
+            videoHTML = '<div class="product-video-wrap">' +
+                '<div class="product-video-label"><i class="fas fa-play-circle"></i> Video Produk</div>' +
+                '<div class="product-video-frame">' +
+                    '<iframe src="' + parsedVideo.embed + '" frameborder="0" allowfullscreen loading="lazy"></iframe>' +
+                '</div>' +
+            '</div>';
+        }
+
         productCard.innerHTML =
             '<div class="product-image-carousel">' +
                 '<div class="product-images-container">' + slidesHTML + '</div>' +
                 navHTML +
                 indicatorsHTML +
             '</div>' +
+            videoHTML +
             '<div class="product-info">' +
                 '<h3 class="product-name">' + product.name + '</h3>' +
                 '<button class="btn-buy" onclick="trackAndRedirect(\'' + affLink + '\', \'' + product.id + '\')">' +
@@ -919,6 +932,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
 console.log('✅ script.js loaded!');
 
+
+// ========================
+// VIDEO PARSER
+// ========================
+function parseVideoUrl(url) {
+    if (!url) return null;
+    url = url.trim();
+    var ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) return { type:'youtube', embed:'https://www.youtube.com/embed/'+ytMatch[1]+'?rel=0&autoplay=0' };
+    var ttMatch = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/);
+    if (ttMatch) return { type:'tiktok', embed:'https://www.tiktok.com/embed/v2/'+ttMatch[1] };
+    return null;
+}
 
 // ========================
 // LIGHTBOX
