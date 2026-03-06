@@ -81,9 +81,17 @@
             <div class="section-header">
                 <div class="section-title-container">
                     <h2>⭐ Koleksi Produk</h2>
-                    <button class="btn-add-product" id="btn-manage-products" title="Tambah/Kelola Produk (Admin)">
-                        <i class="fas fa-plus"></i> Kelola Produk
-                    </button>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <button id="btn-wishlist-page" onclick="toggleWishlistPage()" class="btn-wishlist-page" style="display:none;">
+                            <i class="fas fa-heart"></i> <span id="wishlist-count">0</span>
+                        </button>
+                        <button id="btn-auth-user" onclick="handleAuthClick()" class="btn-auth-user">
+                            <i class="fas fa-user-circle"></i> <span id="user-display-name">Masuk</span>
+                        </button>
+                        <button class="btn-add-product" id="btn-manage-products" title="Tambah/Kelola Produk (Admin)">
+                            <i class="fas fa-plus"></i> Kelola Produk
+                        </button>
+                    </div>
                 </div>
             </div>
             
@@ -157,5 +165,59 @@
     <script src="supabase-config.js"></script>
     <script src="supabase-functions.js"></script>
     <script src="script.js"></script>
+    <!-- Auth Modal -->
+    <div id="auth-modal" style="display:none;">
+        <div class="auth-backdrop" onclick="closeAuthModal()"></div>
+        <div class="auth-container">
+            <button class="auth-close" onclick="closeAuthModal()"><i class="fas fa-times"></i></button>
+            <div class="auth-logo"><i class="fas fa-shopping-bag"></i></div>
+            <h2 class="auth-title" id="auth-title">Masuk ke Instafinds.id</h2>
+            <p class="auth-sub" id="auth-sub">Simpan produk favorit kamu</p>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Masuk</button>
+                <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Daftar</button>
+            </div>
+
+            <div id="auth-error" class="auth-error" style="display:none;"></div>
+            <div id="auth-success" class="auth-success" style="display:none;"></div>
+
+            <div class="auth-form">
+                <div class="auth-field">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="auth-email" placeholder="Email kamu">
+                </div>
+                <div class="auth-field">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="auth-password" placeholder="Password" id="auth-password">
+                </div>
+                <button class="auth-btn" id="auth-submit-btn" onclick="handleAuth()">
+                    <span id="auth-btn-text">Masuk</span>
+                </button>
+            </div>
+
+            <div class="auth-divider"><span>atau</span></div>
+            <button class="auth-google-btn" onclick="loginWithGoogle()">
+                <i class="fab fa-google"></i> Lanjutkan dengan Google
+            </button>
+
+            <p class="auth-footer" id="auth-footer">
+                Belum punya akun? <a href="#" onclick="switchAuthTab('register')">Daftar gratis</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Wishlist Page -->
+    <div id="wishlist-page" style="display:none;position:fixed;inset:0;z-index:9980;background:white;overflow-y:auto;">
+        <div class="wishlist-header">
+            <button onclick="closeWishlistPage()"><i class="fas fa-arrow-left"></i></button>
+            <h2>❤️ Wishlist Saya</h2>
+            <span id="wishlist-count-badge">0</span>
+        </div>
+        <div class="wishlist-grid" id="wishlist-grid">
+            <div class="wishlist-empty">Belum ada produk disimpan</div>
+        </div>
+    </div>
+
 </body>
 </html>
