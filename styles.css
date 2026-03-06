@@ -2845,3 +2845,37 @@ body {
 .wishlist-empty i { font-size: 48px; }
 .wishlist-empty p { font-size: 16px; font-weight: 600; color: #888; margin: 0; }
 .wishlist-empty small { font-size: 13px; color: #bbb; }
+
+/* ======================== SEARCH BAR AUTH BUTTON ======================== */
+.search-auth-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    background: #f4f4f8;
+    border: 1.5px solid #e8e8f0;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #667eea;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+.search-auth-btn:hover {
+    background: #ede9fe;
+    border-color: #667eea;
+}
+.search-auth-btn.logged-in {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-color: transparent;
+}
+.search-auth-btn i { font-size: 14px; }
+
+/* Hide old header auth button on mobile (search bar has it) */
+@media (max-width: 600px) {
+    .btn-auth-user { display: none !important; }
+    .btn-wishlist-page { display: none !important; }
+}
